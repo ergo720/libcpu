@@ -7,7 +7,6 @@
 #    define __x86_64__ 1
 #  endif
 #  if defined(_MSC_VER)
-#    define snprintf                 _snprintf
 #    define strtoull                 _strtoui64
 #    define __func__                 __FUNCTION__
 #  endif /* defined(_MSC_VER) */

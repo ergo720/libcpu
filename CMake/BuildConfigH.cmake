@@ -9,25 +9,31 @@ check_library_exists(readline readline "" HAVE_LIBREADLINE)
 check_library_exists(rt clock_gettime "" HAVE_LIBRT)
 check_include_file(netinet/in.h HAVE_NETINET_IN_H)
 
+IF(MSVC)
+SET(CMAKE_REQUIRED_FLAGS "/std:c++14")
+ELSE(MSVC)
+SET(CMAKE_REQUIRED_FLAGS "-std=c++14")
+ENDIF(MSVC)
+
 CHECK_CXX_SOURCE_COMPILES("
-template <bool x> struct static_assert;
-template <> struct static_assert<true> {};
+template <bool x> struct static_assertion;
+template <> struct static_assertion<true> {};
 struct s { char c; int i; } __attribute__((packed));
 int main() {
-	sizeof(static_assert< sizeof(struct s) == sizeof(char) + sizeof(int) >);
+	sizeof(static_assertion< sizeof(struct s) == sizeof(char) + sizeof(int) >);
 	return 0;
 }
 "
 HAVE_ATTRIBUTE_PACKED)
 
 CHECK_CXX_SOURCE_COMPILES("
-template <bool x> struct static_assert;
-template <> struct static_assert<true> {};
+template <bool x> struct static_assertion;
+template <> struct static_assertion<true> {};
 __pragma(pack(push, 1))
 struct s { char c; int i; };
 __pragma(pack(pop))
 int main() {
-	sizeof(static_assert< sizeof(struct s) == sizeof(char) + sizeof(int) >);
+	sizeof(static_assertion< sizeof(struct s) == sizeof(char) + sizeof(int) >);
 	return 0;
 }
 "

@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <stddef.h>
 
 #include "libcpu.h"
 #include "6502_isa.h"

@@ -14,7 +14,7 @@
 # LLVM_LIBS_JIT_OBJECTS : objects you need to add to your source when using LLVM JIT
 
 if (MSVC)
-  set(LLVM_ROOT "C:/Program Files/LLVM")
+  set(LLVM_ROOT "C:/Program Files (x86)/LLVM")
   if (NOT IS_DIRECTORY ${LLVM_ROOT})
     message(FATAL_ERROR "Could NOT find LLVM")
   endif ()
@@ -26,8 +26,8 @@ if (MSVC)
 
   set(LLVM_COMPILE_FLAGS "")
   set(LLVM_LDFLAGS "")
-  set(LLVM_LIBS_CORE LLVMLinker LLVMArchive LLVMBitWriter LLVMBitReader LLVMInstrumentation LLVMScalarOpts LLVMipo LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMCore LLVMSupport LLVMSystem)
-  set(LLVM_LIBS_JIT LLVMX86AsmParser LLVMX86AsmPrinter LLVMX86CodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMX86Info LLVMJIT LLVMExecutionEngine LLVMCodeGen LLVMScalarOpts LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMCore LLVMSupport LLVMSystem)
+  set(LLVM_LIBS_CORE LLVMLinker LLVMBitWriter LLVMBitReader LLVMInstrumentation LLVMipo LLVMObjCARCOpts LLVMVectorize LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport)
+  set(LLVM_LIBS_JIT LLVMX86Disassembler LLVMX86AsmParser LLVMX86CodeGen LLVMSelectionDAG LLVMAsmPrinter LLVMMCParser LLVMX86Desc LLVMX86Info LLVMX86AsmPrinter LLVMX86Utils LLVMJIT LLVMRuntimeDyld LLVMExecutionEngine LLVMCodeGen LLVMObjCARCOpts LLVMScalarOpts LLVMInstCombine LLVMTransformUtils LLVMipa LLVMAnalysis LLVMTarget LLVMMC LLVMObject LLVMCore LLVMSupport)
   set(LLVM_LIBS_JIT_OBJECTS "")
 endif (MSVC)
 
