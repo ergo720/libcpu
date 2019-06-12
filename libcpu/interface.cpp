@@ -31,7 +31,7 @@ extern arch_func_t arch_func_m68k;
 extern arch_func_t arch_func_mips;
 extern arch_func_t arch_func_m88k;
 extern arch_func_t arch_func_arm;
-extern arch_func_t arch_func_8086;
+extern arch_func_t arch_func_x86;
 extern arch_func_t arch_func_fapra;
 
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
@@ -106,8 +106,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		case CPU_ARCH_ARM:
 			cpu->f = arch_func_arm;
 			break;
-		case CPU_ARCH_8086:
-			cpu->f = arch_func_8086;
+		case CPU_ARCH_X86:
+			cpu->f = arch_func_x86;
 			break;
 		case CPU_ARCH_FAPRA:
 			cpu->f = arch_func_fapra;

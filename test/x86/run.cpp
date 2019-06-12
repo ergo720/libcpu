@@ -44,7 +44,7 @@ main(int argc, char **argv)
 		argv++;
 	}
 	executable = argv[1];
-	arch = CPU_ARCH_8086;
+	arch = CPU_ARCH_X86;
 
 	ramsize = 1*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);

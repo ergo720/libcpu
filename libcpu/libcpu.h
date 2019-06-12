@@ -72,7 +72,7 @@ typedef enum {
 	CPU_ARCH_MIPS,
 	CPU_ARCH_M88K,
 	CPU_ARCH_ARM,
-	CPU_ARCH_8086,
+	CPU_ARCH_X86,
 	CPU_ARCH_FAPRA
 } cpu_arch_t;
 
