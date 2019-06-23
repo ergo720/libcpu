@@ -28,7 +28,7 @@
 
 #define DEFINE_REG48(_reg)			\
 	struct {				\
-		uint32_t		_reg;	\
+		uint8_t		_reg[6];	\
 	}
 
 #define DEFINE_REG32(_reg)			\
@@ -48,11 +48,11 @@ PACKED(struct reg_x86_s {
 	DEFINE_SPLIT_REG8(ecx, cx, ch, cl);
 	DEFINE_SPLIT_REG8(edx, dx, dh, dl);
 	/* Index registers */
-	DEFINE_REG16(esi, si);
-	DEFINE_REG16(edi, di);
+	DEFINE_SPLIT_REG16(esi, si);
+	DEFINE_SPLIT_REG16(edi, di);
 	/* Pointer registers */
-	DEFINE_REG16(ebp, bp);
-	DEFINE_REG16(esp, sp);
+	DEFINE_SPLIT_REG16(ebp, bp);
+	DEFINE_SPLIT_REG16(esp, sp);
 	/* Special purpose registers */
 	DEFINE_REG32(eip);
 	/* Eflags register */

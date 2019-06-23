@@ -132,13 +132,13 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 }
 
 int
-arch_8086_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
+arch_x86_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 {
 	struct x86_instr instr;
 	char operands[32];
 	int len = 0;
 
-	if (arch_8086_decode_instr(&instr, cpu->RAM, pc) != 0) {
+	if (arch_x86_decode_instr(&instr, cpu->RAM, pc) != 0) {
 		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode);
 		exit(1);
 	}
