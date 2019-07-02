@@ -10,7 +10,7 @@
 #include "tag.h"
 
 int
-arch_8086_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc)
+arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc)
 {
 	struct x86_instr instr;
 	int len;
@@ -18,7 +18,7 @@ arch_8086_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *n
 	if (arch_x86_decode_instr(&instr, cpu->RAM, pc) != 0)
 		return -1;
 
-	len = arch_8086_instr_length(&instr);
+	len = arch_x86_instr_length(&instr);
 
 	if (cpu->RAM[pc] == 0xCD && cpu->RAM[pc+1] == 0x20) {
 		//XXX DOS-specific hack to end tagging when an "int $0x20" is encountered
