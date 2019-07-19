@@ -17,6 +17,8 @@
 
 #define Jb (ADDMODE_REL | WIDTH_BYTE)
 #define Jv (ADDMODE_REL | WIDTH_FULL)
+#define Cv (ADDMODE_RM_REG | WIDTH_FULL)
+#define Sb (ADDMODE_RM | WIDTH_BYTE)
 
 static const uint64_t decode_table_one[256] = {
 	/*[0x00]*/	INSTR_ADD | ADDMODE_REG_RM | WIDTH_BYTE,
@@ -277,6 +279,265 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xFF]*/	GROUP_5 | ADDMODE_RM | WIDTH_FULL,
 };
 
+static const uint64_t decode_table_two[256] = {
+	/*[0x00]*/	GROUP_6 | ADDMODE_RM | WIDTH_WORD,
+	/*[0x01]*/	GROUP_7 | ADDMODE_RM | WIDTH_FULL,
+	/*[0x02]*/	INSTR_LAR | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0x03]*/	INSTR_LSL | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0x04]*/	INSTR_UNDEFINED,
+	/*[0x05]*/	INSTR_UNDEFINED,
+	/*[0x06]*/	INSTR_CLTS | ADDMODE_IMPLIED,
+	/*[0x07]*/	INSTR_UNDEFINED,
+	/*[0x08]*/	INSTR_INVD | ADDMODE_IMPLIED,
+	/*[0x09]*/	INSTR_WBINVD | ADDMODE_IMPLIED,
+	/*[0x0A]*/	INSTR_UNDEFINED,
+	/*[0x0B]*/	INSTR_UD2 | ADDMODE_IMPLIED,
+	/*[0x0C]*/	INSTR_UNDEFINED,
+	/*[0x0D]*/	INSTR_UNDEFINED,
+	/*[0x0E]*/	INSTR_UNDEFINED,
+	/*[0x0F]*/	INSTR_UNDEFINED,
+	/*[0x10]*/	INSTR_UNDEFINED, // sse
+	/*[0x11]*/	INSTR_UNDEFINED, // sse
+	/*[0x12]*/	INSTR_UNDEFINED, // sse
+	/*[0x13]*/	INSTR_UNDEFINED, // sse
+	/*[0x14]*/	INSTR_UNDEFINED, // sse
+	/*[0x15]*/	INSTR_UNDEFINED, // sse
+	/*[0x16]*/	INSTR_UNDEFINED, // sse
+	/*[0x17]*/	INSTR_UNDEFINED, // sse
+	/*[0x18]*/	INSTR_UNDEFINED, // sse
+	/*[0x19]*/	INSTR_UNDEFINED,
+	/*[0x1A]*/	INSTR_UNDEFINED,
+	/*[0x1B]*/	INSTR_UNDEFINED,
+	/*[0x1C]*/	INSTR_UNDEFINED,
+	/*[0x1D]*/	INSTR_UNDEFINED,
+	/*[0x1E]*/	INSTR_UNDEFINED,
+	/*[0x1F]*/	INSTR_UNDEFINED,
+	/*[0x20]*/	INSTR_MOV | ADDMODE_CR_RM | WIDTH_FULL,
+	/*[0x21]*/	INSTR_MOV | ADDMODE_DBG_RM | WIDTH_FULL,
+	/*[0x22]*/	INSTR_MOV | ADDMODE_RM_CR | WIDTH_FULL,
+	/*[0x23]*/	INSTR_MOV | ADDMODE_RM_DBG | WIDTH_FULL,
+	/*[0x24]*/	INSTR_UNDEFINED,
+	/*[0x25]*/	INSTR_UNDEFINED,
+	/*[0x26]*/	INSTR_UNDEFINED,
+	/*[0x27]*/	INSTR_UNDEFINED,
+	/*[0x28]*/	INSTR_UNDEFINED, // sse
+	/*[0x29]*/	INSTR_UNDEFINED, // sse
+	/*[0x2A]*/	INSTR_UNDEFINED, // sse
+	/*[0x2B]*/	INSTR_UNDEFINED, // sse
+	/*[0x2C]*/	INSTR_UNDEFINED, // sse
+	/*[0x2D]*/	INSTR_UNDEFINED, // sse
+	/*[0x2E]*/	INSTR_UNDEFINED, // sse
+	/*[0x2F]*/	INSTR_UNDEFINED, // sse
+	/*[0x30]*/	INSTR_WRMSR | ADDMODE_IMPLIED,
+	/*[0x31]*/	INSTR_RDTSC | ADDMODE_IMPLIED,
+	/*[0x32]*/	INSTR_RDMSR | ADDMODE_IMPLIED,
+	/*[0x33]*/	INSTR_RDPMC | ADDMODE_IMPLIED,
+	/*[0x34]*/	INSTR_SYSENTER | ADDMODE_IMPLIED,
+	/*[0x35]*/	INSTR_SYSEXIT | ADDMODE_IMPLIED,
+	/*[0x36]*/	INSTR_UNDEFINED,
+	/*[0x37]*/	INSTR_UNDEFINED,
+	/*[0x38]*/	INSTR_UNDEFINED,
+	/*[0x39]*/	INSTR_UNDEFINED,
+	/*[0x3A]*/	INSTR_UNDEFINED,
+	/*[0x3B]*/	INSTR_UNDEFINED,
+	/*[0x3C]*/	INSTR_UNDEFINED,
+	/*[0x3D]*/	INSTR_UNDEFINED,
+	/*[0x3E]*/	INSTR_UNDEFINED,
+	/*[0x3F]*/	INSTR_UNDEFINED,
+	/*[0x40]*/	INSTR_CMOVO  | Cv,
+	/*[0x41]*/	INSTR_CMOVNO | Cv,
+	/*[0x42]*/	INSTR_CMOVB  | Cv,
+	/*[0x43]*/	INSTR_CMOVNB | Cv,
+	/*[0x44]*/	INSTR_CMOVZ  | Cv,
+	/*[0x45]*/	INSTR_CMOVNE | Cv,
+	/*[0x46]*/	INSTR_CMOVBE | Cv,
+	/*[0x47]*/	INSTR_CMOVA  | Cv,
+	/*[0x48]*/	INSTR_CMOVS  | Cv,
+	/*[0x49]*/	INSTR_CMOVNS | Cv,
+	/*[0x4A]*/	INSTR_CMOVPE | Cv,
+	/*[0x4B]*/	INSTR_CMOVPO | Cv,
+	/*[0x4C]*/	INSTR_CMOVL  | Cv,
+	/*[0x4D]*/	INSTR_CMOVGE | Cv,
+	/*[0x4E]*/	INSTR_CMOVLE | Cv,
+	/*[0x4F]*/	INSTR_CMOVG  | Cv,
+	/*[0x50]*/	INSTR_UNDEFINED, // sse
+	/*[0x51]*/	INSTR_UNDEFINED, // sse
+	/*[0x52]*/	INSTR_UNDEFINED, // sse
+	/*[0x53]*/	INSTR_UNDEFINED, // sse
+	/*[0x54]*/	INSTR_UNDEFINED, // sse
+	/*[0x55]*/	INSTR_UNDEFINED, // sse
+	/*[0x56]*/	INSTR_UNDEFINED, // sse
+	/*[0x57]*/	INSTR_UNDEFINED, // sse
+	/*[0x58]*/	INSTR_UNDEFINED, // sse
+	/*[0x59]*/	INSTR_UNDEFINED, // sse
+	/*[0x5A]*/	INSTR_UNDEFINED,
+	/*[0x5B]*/	INSTR_UNDEFINED,
+	/*[0x5C]*/	INSTR_UNDEFINED, // sse
+	/*[0x5D]*/	INSTR_UNDEFINED, // sse
+	/*[0x5E]*/	INSTR_UNDEFINED, // sse
+	/*[0x5F]*/	INSTR_UNDEFINED, // sse
+	/*[0x60]*/	INSTR_UNDEFINED, // mmx
+	/*[0x61]*/	INSTR_UNDEFINED, // mmx
+	/*[0x62]*/	INSTR_UNDEFINED, // mmx
+	/*[0x63]*/	INSTR_UNDEFINED, // mmx
+	/*[0x64]*/	INSTR_UNDEFINED, // mmx
+	/*[0x65]*/	INSTR_UNDEFINED, // mmx
+	/*[0x66]*/	INSTR_UNDEFINED, // mmx
+	/*[0x67]*/	INSTR_UNDEFINED, // mmx
+	/*[0x68]*/	INSTR_UNDEFINED, // mmx
+	/*[0x69]*/	INSTR_UNDEFINED, // mmx
+	/*[0x6A]*/	INSTR_UNDEFINED, // mmx
+	/*[0x6B]*/	INSTR_UNDEFINED, // mmx
+	/*[0x6C]*/	INSTR_UNDEFINED,
+	/*[0x6D]*/	INSTR_UNDEFINED,
+	/*[0x6E]*/	INSTR_UNDEFINED, // mmx
+	/*[0x6F]*/	INSTR_UNDEFINED, // mmx
+	/*[0x70]*/	INSTR_UNDEFINED, // sse
+	/*[0x71]*/	INSTR_UNDEFINED, // mmx
+	/*[0x72]*/	INSTR_UNDEFINED, // mmx
+	/*[0x73]*/	INSTR_UNDEFINED, // mmx
+	/*[0x74]*/	INSTR_UNDEFINED, // mmx
+	/*[0x75]*/	INSTR_UNDEFINED, // mmx
+	/*[0x76]*/	INSTR_UNDEFINED, // mmx
+	/*[0x77]*/	INSTR_UNDEFINED, // mmx
+	/*[0x78]*/	INSTR_UNDEFINED,
+	/*[0x79]*/	INSTR_UNDEFINED,
+	/*[0x7A]*/	INSTR_UNDEFINED,
+	/*[0x7B]*/	INSTR_UNDEFINED,
+	/*[0x7C]*/	INSTR_UNDEFINED,
+	/*[0x7D]*/	INSTR_UNDEFINED,
+	/*[0x7E]*/	INSTR_UNDEFINED, // mmx
+	/*[0x7F]*/	INSTR_UNDEFINED, // mmx
+	/*[0x80]*/	INSTR_JO  | Jv,
+	/*[0x81]*/	INSTR_JNO | Jv,
+	/*[0x82]*/	INSTR_JB  | Jv,
+	/*[0x83]*/	INSTR_JNB | Jv,
+	/*[0x84]*/	INSTR_JZ  | Jv,
+	/*[0x85]*/	INSTR_JNE | Jv,
+	/*[0x86]*/	INSTR_JBE | Jv,
+	/*[0x87]*/	INSTR_JA  | Jv,
+	/*[0x88]*/	INSTR_JS  | Jv,
+	/*[0x89]*/	INSTR_JNS | Jv,
+	/*[0x8A]*/	INSTR_JPE | Jv,
+	/*[0x8B]*/	INSTR_JPO | Jv,
+	/*[0x8C]*/	INSTR_JL  | Jv,
+	/*[0x8D]*/	INSTR_JGE | Jv,
+	/*[0x8E]*/	INSTR_JLE | Jv,
+	/*[0x8F]*/	INSTR_JG  | Jv,
+	/*[0x90]*/	INSTR_SETO  | Sb,
+	/*[0x91]*/	INSTR_SETNO | Sb,
+	/*[0x92]*/	INSTR_SETB  | Sb,
+	/*[0x93]*/	INSTR_SETNB | Sb,
+	/*[0x94]*/	INSTR_SETZ  | Sb,
+	/*[0x95]*/	INSTR_SETNE | Sb,
+	/*[0x96]*/	INSTR_SETBE | Sb,
+	/*[0x97]*/	INSTR_SETA  | Sb,
+	/*[0x98]*/	INSTR_SETS  | Sb,
+	/*[0x99]*/	INSTR_SETNS | Sb,
+	/*[0x9A]*/	INSTR_SETPE | Sb,
+	/*[0x9B]*/	INSTR_SETPO | Sb,
+	/*[0x9C]*/	INSTR_SETL  | Sb,
+	/*[0x9D]*/	INSTR_SETGE | Sb,
+	/*[0x9E]*/	INSTR_SETLE | Sb,
+	/*[0x9F]*/	INSTR_SETG  | Sb,
+	/*[0xA0]*/	INSTR_PUSH | ADDMODE_SEG_REG /* FS */ | WIDTH_FULL,
+	/*[0xA1]*/	INSTR_POP | ADDMODE_SEG_REG /* FS */ | WIDTH_FULL,
+	/*[0xA2]*/	INSTR_CPUID | ADDMODE_IMPLIED,
+	/*[0xA3]*/	INSTR_BT | ADDMODE_REG_RM | WIDTH_FULL,
+	/*[0xA4]*/	INSTR_SHLD | ADDMODE_REG_IMM8_RM | WIDTH_FULL,
+	/*[0xA5]*/	INSTR_SHLD | ADDMODE_REG_CL_RM | WIDTH_FULL,
+	/*[0xA6]*/	INSTR_UNDEFINED,
+	/*[0xA7]*/	INSTR_UNDEFINED,
+	/*[0xA8]*/	INSTR_PUSH | ADDMODE_SEG_REG /* GS */ | WIDTH_FULL,
+	/*[0xA9]*/	INSTR_POP | ADDMODE_SEG_REG /* GS */ | WIDTH_FULL,
+	/*[0xAA]*/	INSTR_RSM | ADDMODE_IMPLIED,
+	/*[0xAB]*/	INSTR_BTS | ADDMODE_REG_RM | WIDTH_FULL,
+	/*[0xAC]*/	INSTR_SHRD | ADDMODE_REG_IMM8_RM | WIDTH_FULL,
+	/*[0xAD]*/	INSTR_SHRD | ADDMODE_REG_CL_RM | WIDTH_FULL,
+	/*[0xAE]*/	INSTR_UNDEFINED, // fpu, sse
+	/*[0xAF]*/	INSTR_IMUL | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xB0]*/	INSTR_CMPXCHG | ADDMODE_REG_RM | WIDTH_BYTE,
+	/*[0xB1]*/	INSTR_CMPXCHG | ADDMODE_REG_RM | WIDTH_FULL,
+	/*[0xB2]*/	INSTR_LSS | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xB3]*/	INSTR_BTR | ADDMODE_REG_RM | WIDTH_FULL,
+	/*[0xB4]*/	INSTR_LFS | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xB5]*/	INSTR_LGS | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xB6]*/	INSTR_MOVZX | ADDMODE_RM_REG | WIDTH_FULL, // this is wrong, dst op is full-size, but src op is 8 bits
+	/*[0xB7]*/	INSTR_MOVZX | ADDMODE_RM_REG | WIDTH_FULL, // this is wrong, dst op is full-size, but src op is 16 bits
+	/*[0xB8]*/	INSTR_UNDEFINED,
+	/*[0xB9]*/	INSTR_UD1 | ADDMODE_IMPLIED,
+	/*[0xBA]*/	GROUP_8 | ADDMODE_IMM8_RM | WIDTH_FULL,
+	/*[0xBB]*/	INSTR_BTC | ADDMODE_REG_RM | WIDTH_FULL,
+	/*[0xBC]*/	INSTR_BSF | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xBD]*/	INSTR_BSR | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xBE]*/	INSTR_MOVSX | ADDMODE_RM_REG | WIDTH_FULL, // this is wrong, dst op is full-size, but src op is 8 bits
+	/*[0xBF]*/	INSTR_MOVSX | ADDMODE_RM_REG | WIDTH_FULL, // this is wrong, dst op is full-size, but src op is 16 bits
+	/*[0xC0]*/	INSTR_XADD | ADDMODE_REG_RM | WIDTH_BYTE,
+	/*[0xC1]*/	INSTR_XADD | ADDMODE_REG_RM | WIDTH_FULL,
+	/*[0xC2]*/	INSTR_UNDEFINED, // sse
+	/*[0xC3]*/	INSTR_UNDEFINED,
+	/*[0xC4]*/	INSTR_UNDEFINED, // sse
+	/*[0xC5]*/	INSTR_UNDEFINED, // sse
+	/*[0xC6]*/	INSTR_UNDEFINED, // sse
+	/*[0xC7]*/	GROUP_9 | ADDMODE_RM | WIDTH_FULL,
+	/*[0xC8]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xC9]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xCA]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xCB]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xCC]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xCD]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xCE]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xCF]*/	INSTR_BSWAP | ADDMODE_REG | WIDTH_FULL,
+	/*[0xD0]*/	INSTR_UNDEFINED,
+	/*[0xD1]*/	INSTR_UNDEFINED, // mmx
+	/*[0xD2]*/	INSTR_UNDEFINED, // mmx
+	/*[0xD3]*/	INSTR_UNDEFINED, // mmx
+	/*[0xD4]*/	INSTR_UNDEFINED,
+	/*[0xD5]*/	INSTR_UNDEFINED, // mmx
+	/*[0xD6]*/	INSTR_UNDEFINED,
+	/*[0xD7]*/	INSTR_UNDEFINED, // sse
+	/*[0xD8]*/	INSTR_UNDEFINED, // mmx
+	/*[0xD9]*/	INSTR_UNDEFINED, // mmx
+	/*[0xDA]*/	INSTR_UNDEFINED, // sse
+	/*[0xDB]*/	INSTR_UNDEFINED, // mmx
+	/*[0xDC]*/	INSTR_UNDEFINED, // mmx
+	/*[0xDD]*/	INSTR_UNDEFINED, // mmx
+	/*[0xDE]*/	INSTR_UNDEFINED, // sse
+	/*[0xDF]*/	INSTR_UNDEFINED, // mmx
+	/*[0xE0]*/	INSTR_UNDEFINED, // sse
+	/*[0xE1]*/	INSTR_UNDEFINED, // mmx
+	/*[0xE2]*/	INSTR_UNDEFINED, // mmx
+	/*[0xE3]*/	INSTR_UNDEFINED, // sse
+	/*[0xE4]*/	INSTR_UNDEFINED, // sse
+	/*[0xE5]*/	INSTR_UNDEFINED, // mmx
+	/*[0xE6]*/	INSTR_UNDEFINED,
+	/*[0xE7]*/	INSTR_UNDEFINED, // sse
+	/*[0xE8]*/	INSTR_UNDEFINED, // mmx
+	/*[0xE9]*/	INSTR_UNDEFINED, // mmx
+	/*[0xEA]*/	INSTR_UNDEFINED, // sse
+	/*[0xEB]*/	INSTR_UNDEFINED, // mmx
+	/*[0xEC]*/	INSTR_UNDEFINED, // mmx
+	/*[0xED]*/	INSTR_UNDEFINED, // mmx
+	/*[0xEE]*/	INSTR_UNDEFINED, // sse
+	/*[0xEF]*/	INSTR_UNDEFINED, // mmx
+	/*[0xF0]*/	INSTR_UNDEFINED,
+	/*[0xF1]*/	INSTR_UNDEFINED, // mmx
+	/*[0xF2]*/	INSTR_UNDEFINED, // mmx
+	/*[0xF3]*/	INSTR_UNDEFINED, // mmx
+	/*[0xF4]*/	INSTR_UNDEFINED,
+	/*[0xF5]*/	INSTR_UNDEFINED, // mmx
+	/*[0xF6]*/	INSTR_UNDEFINED, // sse
+	/*[0xF7]*/	INSTR_UNDEFINED, // sse
+	/*[0xF8]*/	INSTR_UNDEFINED, // mmx
+	/*[0xF9]*/	INSTR_UNDEFINED, // mmx
+	/*[0xFA]*/	INSTR_UNDEFINED, // mmx
+	/*[0xFB]*/	INSTR_UNDEFINED,
+	/*[0xFC]*/	INSTR_UNDEFINED, // mmx
+	/*[0xFD]*/	INSTR_UNDEFINED, // mmx
+	/*[0xFE]*/	INSTR_UNDEFINED, // mmx
+	/*[0xFF]*/	INSTR_UNDEFINED,
+};
+
 static const uint32_t grp1_decode_table[8] = {
 	/*[0x00]*/	INSTR_ADD,
 	/*[0x01]*/	INSTR_OR,
@@ -329,6 +590,50 @@ static const uint32_t grp5_decode_table[8] = {
 	/*[0x04]*/	INSTR_JMP,
 	/*[0x05]*/	INSTR_JMP,
 	/*[0x06]*/	INSTR_PUSH,
+	/*[0x07]*/	0,
+};
+
+static const uint32_t grp6_decode_table[8] = {
+	/*[0x00]*/	INSTR_SLDT,
+	/*[0x01]*/	INSTR_STR,
+	/*[0x02]*/	INSTR_LLDT,
+	/*[0x03]*/	INSTR_LTR,
+	/*[0x04]*/	INSTR_VERR,
+	/*[0x05]*/	INSTR_VERW,
+	/*[0x06]*/	0,
+	/*[0x07]*/	0,
+};
+
+static const uint32_t grp7_decode_table[8] = {
+	/*[0x00]*/	INSTR_SGDT,
+	/*[0x01]*/	INSTR_SIDT,
+	/*[0x02]*/	INSTR_LGDT,
+	/*[0x03]*/	INSTR_LIDT,
+	/*[0x04]*/	INSTR_SMSW,
+	/*[0x05]*/	0,
+	/*[0x06]*/	INSTR_LMSW,
+	/*[0x07]*/	INSTR_INVLPG,
+};
+
+static const uint32_t grp8_decode_table[8] = {
+	/*[0x00]*/	0,
+	/*[0x01]*/	0,
+	/*[0x02]*/	0,
+	/*[0x03]*/	0,
+	/*[0x04]*/	INSTR_BT,
+	/*[0x05]*/	INSTR_BTS,
+	/*[0x06]*/	INSTR_BTR,
+	/*[0x07]*/	INSTR_BTC,
+};
+
+static const uint32_t grp9_decode_table[8] = {
+	/*[0x00]*/	0,
+	/*[0x01]*/	INSTR_CMPXCHG8,
+	/*[0x02]*/	0,
+	/*[0x03]*/	0,
+	/*[0x04]*/	0,
+	/*[0x05]*/	0,
+	/*[0x06]*/	0,
 	/*[0x07]*/	0,
 };
 
@@ -728,7 +1033,7 @@ static const uint64_t sib_src_decode[] = {
 };
 
 static void
-decode_sib_byte(struct x86_instr* instr, uint8_t sib)
+decode_sib_byte(struct x86_instr *instr, uint8_t sib)
 {
 	instr->scale = (sib & 0xc0) >> 6;
 	instr->idx = (sib & 0x38) >> 3;
@@ -763,7 +1068,7 @@ static const uint64_t mod_src_decode[] = {
 };
 
 static void
-decode_modrm_fields(struct x86_instr* instr, uint8_t modrm)
+decode_modrm_fields(struct x86_instr *instr, uint8_t modrm)
 {
 	instr->mod = (modrm & 0xc0) >> 6;
 	instr->reg_opc = (modrm & 0x38) >> 3;
@@ -920,7 +1225,14 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 done_prefixes:
 
 	/* Opcode byte */
-	decode		= decode_table_one[opcode];
+	if (opcode == 0x0F) {
+		opcode = RAM[pc++];
+		decode = decode_table_two[opcode];
+		instr->nr_bytes++;
+	}
+	else {
+		decode = decode_table_one[opcode];
+	}
 
 	instr->opcode	= opcode;
 	instr->type	= decode & X86_INSTR_TYPE_MASK;
@@ -951,6 +1263,26 @@ done_prefixes:
 			break;
 		case GROUP_5:
 			instr->type = grp5_decode_table[instr->reg_opc];
+			break;
+		case GROUP_6:
+			instr->type = grp6_decode_table[instr->reg_opc];
+			if (instr->type == INSTR_SLDT || instr->type == INSTR_STR) {
+				instr->flags &= ~WIDTH_WORD;
+				instr->flags |= WIDTH_FULL;
+			}
+			break;
+		case GROUP_7:
+			instr->type = grp7_decode_table[instr->reg_opc];
+			if (instr->type == INSTR_LMSW) {
+				instr->flags &= ~WIDTH_FULL;
+				instr->flags |= WIDTH_WORD;
+			}
+			break;
+		case GROUP_8:
+			instr->type = grp8_decode_table[instr->reg_opc];
+			break;
+		case GROUP_9:
+			instr->type = grp9_decode_table[instr->reg_opc];
 			break;
 		default:
 			break;
