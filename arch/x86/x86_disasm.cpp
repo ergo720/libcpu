@@ -11,7 +11,7 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-static const char* mnemo[] = {
+static const char *mnemo[] = {
 #define DECLARE_INSTR(name,str) str,
 #include "x86_instr.h"
 #undef DECLARE_INSTR
@@ -62,6 +62,28 @@ static const char *seg_reg_names[] = {
 	"%ds",
 	"%fs",
 	"%gs",
+};
+
+static const char *cr_reg_names[] = {
+	"%cr0",
+	"",
+	"%cr2",
+	"%cr3",
+	"%cr4",
+	"",
+	"",
+	"",
+};
+
+static const char *dbg_reg_names[] = {
+	"%db0",
+	"%db1",
+	"%db2",
+	"%db3",
+	"",
+	"",
+	"%db6",
+	"%db7",
 };
 
 static const char *mem_reg_names_16[] = {
@@ -176,6 +198,34 @@ static const char *to_seg_reg_name(struct x86_instr *instr, unsigned int reg_num
 	return seg_reg_names[reg_num];
 }
 
+static const char *to_cr_reg_name(struct x86_instr *instr, unsigned int reg_num)
+{
+	return cr_reg_names[reg_num];
+}
+
+static const char *to_dbg_reg_name(struct x86_instr *instr, unsigned int reg_num)
+{
+	return dbg_reg_names[reg_num];
+}
+
+static const char *add_instr_suffix(struct x86_instr *instr)
+{
+	if (instr->flags & ATT_NO_SUFFIX ||
+		!(instr->flags & (WIDTH_BYTE | WIDTH_WORD | WIDTH_FULL | WIDTH_QWORD)))
+		return "";
+
+	if (instr->flags & WIDTH_BYTE)
+		return "b";
+
+	if (instr->flags & WIDTH_WORD)
+		return "w";
+
+	if (instr->flags & WIDTH_FULL)
+		return "l";
+
+	return "q";
+}
+
 static int
 print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand)
 {
@@ -194,8 +244,17 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 	case OP_REG:
 		ret = snprintf(operands, size, "%s", to_reg_name(instr, operand->reg));
 		break;
+	case OP_REG8:
+		ret = snprintf(operands, size, "%s", byte_reg_names[operand->reg]);
+		break;
 	case OP_SEG_REG:
 		ret = snprintf(operands, size, "%s", to_seg_reg_name(instr, operand->reg));
+		break;
+	case OP_CR_REG:
+		ret = snprintf(operands, size, "%s", to_cr_reg_name(instr, operand->reg));
+		break;
+	case OP_DBG_REG:
+		ret = snprintf(operands, size, "%s", to_dbg_reg_name(instr, operand->reg));
 		break;
 	case OP_MOFFSET:
 		ret = snprintf(operands, size, "%s0x%x", sign_to_str(operand->disp), abs(operand->disp));
@@ -255,7 +314,7 @@ arch_x86_disasm_instr(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line)
 	if (!(instr.flags & DST_NONE))
 		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.dst);
 
-    snprintf(line, max_line, "%s%s%-8s%s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], to_mnemonic(&instr), operands);
+    snprintf(line, max_line, "%s%s%-*s%s %s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], strlen(to_mnemonic(&instr)), to_mnemonic(&instr), add_instr_suffix(&instr), operands);
 
     return arch_x86_instr_length(&instr);
 }
