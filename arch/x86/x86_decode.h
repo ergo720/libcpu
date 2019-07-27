@@ -116,7 +116,7 @@ enum x86_instr_flags : uint64_t {
 
 	OP3_MASK		= OP3_NONE|OP3_IMM_MASK|OP3_CL,
 
-	MEM_DISP_MASK		= SRC_MEM|SRC_MEM_DISP_BYTE|SRC_MEM_DISP_WORD|SRC_MEM_DISP_FULL|DST_MEM|DST_MEM_DISP_BYTE|DST_MEM_DISP_WORD|DST_MEM_DISP_FULL,
+	MEM_DISP_MASK		= SRC_MEM_DISP_BYTE|SRC_MEM_DISP_WORD|SRC_MEM_DISP_FULL|DST_MEM_DISP_BYTE|DST_MEM_DISP_WORD|DST_MEM_DISP_FULL,
 
 	MOFFSET_MASK		= SRC_MOFFSET|DST_MOFFSET,
 
@@ -133,7 +133,13 @@ enum x86_instr_flags : uint64_t {
 	GROUP_9			= (1ULL << 55),
 	GROUP_MASK		= GROUP_1|GROUP_2|GROUP_3|GROUP_4|GROUP_5|GROUP_6|GROUP_7|GROUP_8|GROUP_9,
 
-	ATT_NO_SUFFIX	= (1ULL << 56),  // att syntax specific
+	/* Syntax specific flags */
+	ATT_NO_SUFFIX	= (1ULL << 56),
+	INTEL_NO_PREFIX	= (1ULL << 57),
+	INTEL_BYTE		= (1ULL << 58),
+	INTEL_WORD		= (1ULL << 59),
+	INTEL_QWORD		= (1ULL << 60),
+	INTEL_FWORD		= (1ULL << 61),
 };
 
 /*
@@ -165,10 +171,10 @@ enum x86_addmode : uint64_t {
 	ADDMODE_FAR_PTR		= DST_NONE|SRC_IMM48|OP3_NONE,	/* far pointer */
 	ADDMODE_IMM8_IMM16	= SRC_IMM8|DST_IMM16|OP3_NONE, /* immediate8, immediate16 */
 	ADDMODE_RM_SEG_REG	= DST_SEG3_REG|MOD_RM|OP3_NONE,		/* register/memory -> segment register */
-	ADDMODE_CR_RM		= SRC_CR_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* control register -> register/memory */
-	ADDMODE_DBG_RM		= SRC_DBG_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* debug register -> register/memory */
-	ADDMODE_RM_CR		= DST_CR_REG|MOD_RM|OP3_NONE,		/* register/memory -> control register */
-	ADDMODE_RM_DBG		= DST_DBG_REG|MOD_RM|OP3_NONE,		/* register/memory -> debug register */
+	ADDMODE_CR_RM		= SRC_CR_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* control register -> register */
+	ADDMODE_DBG_RM		= SRC_DBG_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* debug register -> register */
+	ADDMODE_RM_CR		= DST_CR_REG|MOD_RM|OP3_NONE,		/* register -> control register */
+	ADDMODE_RM_DBG		= DST_DBG_REG|MOD_RM|OP3_NONE,		/* register -> debug register */
 };
 
 struct x86_instr {
@@ -201,7 +207,7 @@ struct x86_instr {
 };
 
 int
-arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc);
+arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel);
 
 int
 arch_x86_instr_length(struct x86_instr *instr);

@@ -14,7 +14,7 @@
 #define X86_INSTR_TYPE_MASK	0xff
 
 #define INSTR_UNDEFINED		0	// non-existent instr
-#define INSTR_DIFF_NAME		0	// instr with multiple names
+#define INSTR_DIFF_SYNTAX	0	// instr has different syntax between intel and att
 
 #define Jb (ADDMODE_REL | WIDTH_BYTE)
 #define Jv (ADDMODE_REL | WIDTH_FULL)
@@ -120,7 +120,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x5F]*/	INSTR_POP | ADDMODE_REG /* DI */  | WIDTH_FULL,
 	/*[0x60]*/	INSTR_PUSHA | ADDMODE_IMPLIED | WIDTH_FULL,
 	/*[0x61]*/	INSTR_POPA | ADDMODE_IMPLIED | WIDTH_FULL,
-	/*[0x62]*/	INSTR_BOUND | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0x62]*/	INSTR_BOUND | ADDMODE_RM_REG | WIDTH_FULL | INTEL_QWORD,
 	/*[0x63]*/	INSTR_ARPL | ADDMODE_REG_RM | WIDTH_WORD | ATT_NO_SUFFIX,
 	/*[0x64]*/	0 /* FS_OVERRIDE */,
 	/*[0x65]*/	0 /* GS_OVERRIDE */,
@@ -174,9 +174,9 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x95]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
 	/*[0x96]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
 	/*[0x97]*/	INSTR_XCHG | ADDMODE_ACC_REG | WIDTH_FULL,
-	/*[0x98]*/	INSTR_DIFF_NAME | ADDMODE_IMPLIED,
-	/*[0x99]*/	INSTR_DIFF_NAME | ADDMODE_IMPLIED,
-	/*[0x9A]*/	INSTR_LCALL | ADDMODE_FAR_PTR | WIDTH_FULL,
+	/*[0x98]*/	INSTR_DIFF_SYNTAX | ADDMODE_IMPLIED,
+	/*[0x99]*/	INSTR_DIFF_SYNTAX | ADDMODE_IMPLIED,
+	/*[0x9A]*/	INSTR_DIFF_SYNTAX | ADDMODE_FAR_PTR | WIDTH_FULL,
 	/*[0x9B]*/	INSTR_UNDEFINED, // fpu
 	/*[0x9C]*/	INSTR_PUSHF | ADDMODE_IMPLIED,
 	/*[0x9D]*/	INSTR_POPF | ADDMODE_IMPLIED,
@@ -218,14 +218,14 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xC1]*/	GROUP_2 | ADDMODE_IMM8_RM | WIDTH_FULL,
 	/*[0xC2]*/	INSTR_RET | ADDMODE_IMM | WIDTH_WORD | ATT_NO_SUFFIX,
 	/*[0xC3]*/	INSTR_RET | ADDMODE_IMPLIED,
-	/*[0xC4]*/	INSTR_LES | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0xC5]*/	INSTR_LDS | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xC4]*/	INSTR_LES | ADDMODE_RM_REG | WIDTH_FULL | INTEL_FWORD,
+	/*[0xC5]*/	INSTR_LDS | ADDMODE_RM_REG | WIDTH_FULL | INTEL_FWORD,
 	/*[0xC6]*/	INSTR_MOV | ADDMODE_IMM8_RM | WIDTH_BYTE,
 	/*[0xC7]*/	INSTR_MOV | ADDMODE_IMM_RM | WIDTH_FULL,
 	/*[0xC8]*/	INSTR_ENTER | ADDMODE_IMM8_IMM16 | WIDTH_WORD | ATT_NO_SUFFIX,
 	/*[0xC9]*/	INSTR_LEAVE | ADDMODE_IMPLIED,
-	/*[0xCA]*/	INSTR_LRET | ADDMODE_IMM | WIDTH_WORD | ATT_NO_SUFFIX,
-	/*[0xCB]*/	INSTR_LRET | ADDMODE_IMPLIED,
+	/*[0xCA]*/	INSTR_DIFF_SYNTAX | ADDMODE_IMM | WIDTH_WORD | ATT_NO_SUFFIX,
+	/*[0xCB]*/	INSTR_DIFF_SYNTAX | ADDMODE_IMPLIED,
 	/*[0xCC]*/	INSTR_INT3 | ADDMODE_IMPLIED,
 	/*[0xCD]*/	INSTR_INT | ADDMODE_IMM | WIDTH_BYTE | ATT_NO_SUFFIX,
 	/*[0xCE]*/	INSTR_INTO | ADDMODE_IMPLIED,
@@ -237,7 +237,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xD4]*/	INSTR_AAM | ADDMODE_IMM | WIDTH_BYTE | ATT_NO_SUFFIX,
 	/*[0xD5]*/	INSTR_AAD | ADDMODE_IMM | WIDTH_BYTE | ATT_NO_SUFFIX,
 	/*[0xD6]*/	INSTR_UNDEFINED, // SALC undocumented instr, should add this?
-	/*[0xD7]*/	INSTR_XLATB | ADDMODE_IMPLIED | WIDTH_BYTE | ATT_NO_SUFFIX,
+	/*[0xD7]*/	INSTR_XLATB | ADDMODE_IMPLIED,
 	/*[0xD8]*/	INSTR_UNDEFINED, // fpu
 	/*[0xD9]*/	INSTR_UNDEFINED, // fpu
 	/*[0xDA]*/	INSTR_UNDEFINED, // fpu
@@ -256,7 +256,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xE7]*/	INSTR_OUT | ADDMODE_IMM8 | WIDTH_FULL,
 	/*[0xE8]*/	INSTR_CALL | Jv,
 	/*[0xE9]*/	INSTR_JMP  | Jv,
-	/*[0xEA]*/	INSTR_LJMP | ADDMODE_FAR_PTR | WIDTH_FULL,
+	/*[0xEA]*/	INSTR_DIFF_SYNTAX | ADDMODE_FAR_PTR | WIDTH_FULL,
 	/*[0xEB]*/	INSTR_JMP  | Jb | ATT_NO_SUFFIX,
 	/*[0xEC]*/	INSTR_IN | ADDMODE_IMPLIED | WIDTH_BYTE,
 	/*[0xED]*/	INSTR_IN | ADDMODE_IMPLIED | WIDTH_FULL,
@@ -283,8 +283,8 @@ static const uint64_t decode_table_one[256] = {
 static const uint64_t decode_table_two[256] = {
 	/*[0x00]*/	GROUP_6 | ADDMODE_RM | WIDTH_WORD | ATT_NO_SUFFIX,
 	/*[0x01]*/	GROUP_7 | ADDMODE_RM | WIDTH_FULL,
-	/*[0x02]*/	INSTR_LAR | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0x03]*/	INSTR_LSL | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0x02]*/	INSTR_LAR | ADDMODE_RM_REG | WIDTH_FULL | INTEL_WORD,
+	/*[0x03]*/	INSTR_LSL | ADDMODE_RM_REG | WIDTH_FULL | INTEL_WORD,
 	/*[0x04]*/	INSTR_UNDEFINED,
 	/*[0x05]*/	INSTR_UNDEFINED,
 	/*[0x06]*/	INSTR_CLTS | ADDMODE_IMPLIED,
@@ -459,20 +459,20 @@ static const uint64_t decode_table_two[256] = {
 	/*[0xAF]*/	INSTR_IMUL | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0xB0]*/	INSTR_CMPXCHG | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0xB1]*/	INSTR_CMPXCHG | ADDMODE_REG_RM | WIDTH_FULL,
-	/*[0xB2]*/	INSTR_LSS | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xB2]*/	INSTR_LSS | ADDMODE_RM_REG | WIDTH_FULL | INTEL_FWORD,
 	/*[0xB3]*/	INSTR_BTR | ADDMODE_REG_RM | WIDTH_FULL,
-	/*[0xB4]*/	INSTR_LFS | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0xB5]*/	INSTR_LGS | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0xB6]*/	INSTR_MOVZXB | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0xB7]*/	INSTR_MOVZXW | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xB4]*/	INSTR_LFS | ADDMODE_RM_REG | WIDTH_FULL | INTEL_FWORD,
+	/*[0xB5]*/	INSTR_LGS | ADDMODE_RM_REG | WIDTH_FULL | INTEL_FWORD,
+	/*[0xB6]*/	INSTR_DIFF_SYNTAX | ADDMODE_RM_REG | WIDTH_FULL | INTEL_BYTE,
+	/*[0xB7]*/	INSTR_DIFF_SYNTAX | ADDMODE_RM_REG | WIDTH_FULL | INTEL_WORD,
 	/*[0xB8]*/	INSTR_UNDEFINED,
 	/*[0xB9]*/	INSTR_UD1 | ADDMODE_IMPLIED,
 	/*[0xBA]*/	GROUP_8 | ADDMODE_IMM8_RM | WIDTH_FULL,
 	/*[0xBB]*/	INSTR_BTC | ADDMODE_REG_RM | WIDTH_FULL,
 	/*[0xBC]*/	INSTR_BSF | ADDMODE_RM_REG | WIDTH_FULL,
 	/*[0xBD]*/	INSTR_BSR | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0xBE]*/	INSTR_MOVSXB | ADDMODE_RM_REG | WIDTH_FULL,
-	/*[0xBF]*/	INSTR_MOVSXW | ADDMODE_RM_REG | WIDTH_FULL,
+	/*[0xBE]*/	INSTR_DIFF_SYNTAX | ADDMODE_RM_REG | WIDTH_FULL | INTEL_BYTE,
+	/*[0xBF]*/	INSTR_DIFF_SYNTAX | ADDMODE_RM_REG | WIDTH_FULL | INTEL_WORD,
 	/*[0xC0]*/	INSTR_XADD | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0xC1]*/	INSTR_XADD | ADDMODE_REG_RM | WIDTH_FULL,
 	/*[0xC2]*/	INSTR_UNDEFINED, // sse
@@ -587,9 +587,9 @@ static const uint32_t grp5_decode_table[8] = {
 	/*[0x00]*/	INSTR_INC,
 	/*[0x01]*/	INSTR_DEC,
 	/*[0x02]*/	INSTR_CALL,
-	/*[0x03]*/	INSTR_LCALL,
+	/*[0x03]*/	INSTR_DIFF_SYNTAX,
 	/*[0x04]*/	INSTR_JMP,
-	/*[0x05]*/	INSTR_LJMP,
+	/*[0x05]*/	INSTR_DIFF_SYNTAX,
 	/*[0x06]*/	INSTR_PUSH,
 	/*[0x07]*/	0,
 };
@@ -606,10 +606,10 @@ static const uint32_t grp6_decode_table[8] = {
 };
 
 static const uint32_t grp7_decode_table[8] = {
-	/*[0x00]*/	INSTR_DIFF_NAME,
-	/*[0x01]*/	INSTR_DIFF_NAME,
-	/*[0x02]*/	INSTR_DIFF_NAME,
-	/*[0x03]*/	INSTR_DIFF_NAME,
+	/*[0x00]*/	INSTR_DIFF_SYNTAX,
+	/*[0x01]*/	INSTR_DIFF_SYNTAX,
+	/*[0x02]*/	INSTR_DIFF_SYNTAX,
+	/*[0x03]*/	INSTR_DIFF_SYNTAX,
 	/*[0x04]*/	INSTR_SMSW,
 	/*[0x05]*/	0,
 	/*[0x06]*/	INSTR_LMSW,
@@ -638,19 +638,50 @@ static const uint32_t grp9_decode_table[8] = {
 	/*[0x07]*/	0,
 };
 
-static const uint32_t instr_variable_name[] = {
+static const uint32_t instr_variable_syntax_att[] = {
 	/*[0x0F0100]*/		INSTR_SGDTL,
 	/*[0x0F0108]*/		INSTR_SIDTL,
 	/*[0x0F0110]*/		INSTR_LGDTL,
 	/*[0x0F0118]*/		INSTR_LIDTL,
+	/*[0x0FB6]*/		INSTR_MOVZXB,
+	/*[0x0FB7]*/		INSTR_MOVZXW,
+	/*[0x0FBE]*/		INSTR_MOVSXB,
+	/*[0x0FBF]*/		INSTR_MOVSXW,
 	/*[0x98]*/			INSTR_CWTL,
 	/*[0x99]*/			INSTR_CLTD,
+	/*[0x9A,0xFF/3]*/	INSTR_LCALL,
+	/*[0xCA]*/			INSTR_LRET,
+	/*[0xCB]*/			INSTR_LRET,
+	/*[0xEA,0xFF/5]*/	INSTR_LJMP,
 	/*[0x660F0100]*/	INSTR_SGDTW,
 	/*[0x660F0108]*/	INSTR_SIDTW,
 	/*[0x660F0110]*/	INSTR_LGDTW,
 	/*[0x660F0118]*/	INSTR_LIDTW,
 	/*[0x6698]*/		INSTR_CBTV,
 	/*[0x6699]*/		INSTR_CWTD,
+};
+
+static const uint32_t instr_variable_syntax_intel[] = {
+	/*[0x0F0100]*/		INSTR_SGDTD,
+	/*[0x0F0108]*/		INSTR_SIDTD,
+	/*[0x0F0110]*/		INSTR_LGDTD,
+	/*[0x0F0118]*/		INSTR_LIDTD,
+	/*[0x0FB6]*/		INSTR_MOVZX,
+	/*[0x0FBE]*/		INSTR_MOVZX,
+	/*[0x0FBF]*/		INSTR_MOVSX,
+	/*[0x0FB7]*/		INSTR_MOVSX,
+	/*[0x98]*/			INSTR_CWDE,
+	/*[0x99]*/			INSTR_CDQ,
+	/*[0x9A,0xFF/3]*/	INSTR_CALL,
+	/*[0xCA]*/			INSTR_RETF,
+	/*[0xCB]*/			INSTR_RETF,
+	/*[0xEA,0xFF/5]*/	INSTR_JMP,
+	/*[0x660F0100]*/	INSTR_SGDTW,
+	/*[0x660F0108]*/	INSTR_SIDTW,
+	/*[0x660F0110]*/	INSTR_LGDTW,
+	/*[0x660F0118]*/	INSTR_LIDTW,
+	/*[0x6698]*/		INSTR_CBW,
+	/*[0x6699]*/		INSTR_CWD,
 };
 
 static void
@@ -950,37 +981,29 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	switch (instr->flags & (SRC_IMM8 | SRC_IMM48 | OP3_IMM_MASK | DST_IMM16)) {
 	case SRC_IMM8:
 		instr->imm_data[0] = read_u8(RAM, pc);
-		instr->nr_bytes += 1;
 		return;
 	case SRC_IMM48: // far JMP and far CALL instr
 		if (instr->flags & WIDTH_FULL) {
 			instr->imm_data[0] = read_u32(RAM, pc);
-			instr->nr_bytes += 4;
 		}
 		else {
 			instr->imm_data[0] = read_u16(RAM, pc);
-			instr->nr_bytes += 2;
 		}
 		instr->imm_data[1] = read_u16(RAM, pc);
-		instr->nr_bytes += 2;
 		return;
 	case SRC_IMM8|DST_IMM16: // ENTER instr
 		instr->imm_data[1] = read_u16(RAM, pc);
 		instr->imm_data[0] = read_u8(RAM, pc);
-		instr->nr_bytes += 3;
 		return;
 	case OP3_IMM8:
 		instr->imm_data[0] = read_u8(RAM, pc);
-		instr->nr_bytes += 1;
 		return;
 	case OP3_IMM:
 		if (instr->flags & WIDTH_FULL) {
 			instr->imm_data[0] = read_u32(RAM, pc);
-			instr->nr_bytes += 4;
 		}
 		else {
 			instr->imm_data[0] = read_u16(RAM, pc);
-			instr->nr_bytes += 2;
 		}
 		return;
 	default:
@@ -990,15 +1013,12 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	switch (instr->flags & WIDTH_MASK) {
 	case WIDTH_FULL:
 		instr->imm_data[0] = read_u32(RAM, pc);
-		instr->nr_bytes += 4;
 		break;
 	case WIDTH_WORD:
 		instr->imm_data[0] = read_u16(RAM, pc);
-		instr->nr_bytes += 2;
 		break;
 	case WIDTH_BYTE:
 		instr->imm_data[0] = read_u8(RAM, pc);
-		instr->nr_bytes += 1;
 		break;
 	default:
 		break;
@@ -1011,15 +1031,12 @@ decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	switch (instr->flags & WIDTH_MASK) {
 	case WIDTH_FULL:
 		instr->rel_data[0] = read_s32(RAM, pc);
-		instr->nr_bytes += 4;
 		break;
 	case WIDTH_WORD:
 		instr->rel_data[0] = read_s16(RAM, pc);
-		instr->nr_bytes += 2;
 		break;
 	case WIDTH_BYTE:
 		instr->rel_data[0] = read_s8(RAM, pc);
-		instr->nr_bytes += 1;
 		break;
 	default:
 		break;
@@ -1031,11 +1048,9 @@ decode_moffset(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	if (instr->addr_size_override == 0) {
 		instr->disp = read_u32(RAM, pc);
-		instr->nr_bytes += 4;
 	}
 	else {
 		instr->disp = read_u16(RAM, pc);
-		instr->nr_bytes += 2;
 	}
 }
 
@@ -1046,17 +1061,14 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	case SRC_MEM_DISP_FULL:
 	case DST_MEM_DISP_FULL:
 		instr->disp = read_s32(RAM, pc);
-		instr->nr_bytes += 4;
 		break;
 	case SRC_MEM_DISP_WORD:
 	case DST_MEM_DISP_WORD:
 		instr->disp	= read_s16(RAM, pc);
-		instr->nr_bytes	+= 2;
 		break;
 	case SRC_MEM_DISP_BYTE:
 	case DST_MEM_DISP_BYTE:
 		instr->disp	= read_s8(RAM, pc);
-		instr->nr_bytes	+= 1;
 		break;
 	}
 }
@@ -1090,8 +1102,6 @@ decode_sib_byte(struct x86_instr *instr, uint8_t sib)
 			instr->flags |= sib_src_decode[instr->mod];
 		}
 	}
-
-	instr->nr_bytes++;
 }
 
 static const uint64_t mod_dst_decode[] = {
@@ -1114,8 +1124,6 @@ decode_modrm_fields(struct x86_instr *instr, uint8_t modrm)
 	instr->mod = (modrm & 0xc0) >> 6;
 	instr->reg_opc = (modrm & 0x38) >> 3;
 	instr->rm = (modrm & 0x07);
-
-	instr->nr_bytes++;
 }
 
 static void
@@ -1206,12 +1214,13 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 }
 
 int
-arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
+arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel)
 {
 	uint64_t decode;
 	uint8_t opcode;
+	addr_t start_pc;
 
-	instr->nr_bytes = 1;
+	start_pc = pc;
 
 	/* Prefixes */
 	instr->seg_override	= NO_OVERRIDE;
@@ -1246,6 +1255,10 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 				instr->flags &= ~WIDTH_FULL;
 				instr->flags |= WIDTH_WORD;
 			}
+			else if ((instr->flags & WIDTH_BYTE) == 0 && instr->flags & INTEL_QWORD) {
+				instr->flags &= ~INTEL_QWORD;
+				instr->flags |= WIDTH_FULL;
+			}
 			break;
 		case 0x67:
 			instr->addr_size_override = 1;
@@ -1262,7 +1275,6 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc)
 		default:
 			goto done_prefixes;
 		}
-		instr->nr_bytes++;
 	}
 
 done_prefixes:
@@ -1271,7 +1283,6 @@ done_prefixes:
 	if (opcode == 0x0F) {
 		opcode = RAM[pc++];
 		decode = decode_table_two[opcode];
-		instr->nr_bytes++;
 	}
 	else {
 		decode = decode_table_one[opcode];
@@ -1285,18 +1296,78 @@ done_prefixes:
 		return -1;
 
 	if (instr->type == 0) {
-		switch ((instr->op_size_override << 8) | instr->opcode) {
+		switch ((use_intel << 16) | (instr->op_size_override << 8) | instr->opcode) {
 		case 0x98:
-			instr->type = instr_variable_name[4];
+			instr->type = instr_variable_syntax_att[8];
 			break;
 		case 0x99:
-			instr->type = instr_variable_name[5];
+			instr->type = instr_variable_syntax_att[9];
+			break;
+		case 0x9A:
+			instr->type = instr_variable_syntax_att[10];
+			break;
+		case 0xB6:
+			instr->type = instr_variable_syntax_att[4];
+			break;
+		case 0xB7:
+			instr->type = instr_variable_syntax_att[5];
+			break;
+		case 0xBE:
+			instr->type = instr_variable_syntax_att[6];
+			break;
+		case 0xBF:
+			instr->type = instr_variable_syntax_att[7];
+			break;
+		case 0xCA:
+			instr->type = instr_variable_syntax_att[11];
+			break;
+		case 0xCB:
+			instr->type = instr_variable_syntax_att[12];
+			break;
+		case 0xEA:
+			instr->type = instr_variable_syntax_att[13];
 			break;
 		case 0x198:
-			instr->type = instr_variable_name[10];
+			instr->type = instr_variable_syntax_att[18];
 			break;
 		case 0x199:
-			instr->type = instr_variable_name[11];
+			instr->type = instr_variable_syntax_att[19];
+			break;
+		case 0x10098:
+			instr->type = instr_variable_syntax_intel[8];
+			break;
+		case 0x10099:
+			instr->type = instr_variable_syntax_intel[9];
+			break;
+		case 0x1009A:
+			instr->type = instr_variable_syntax_intel[10];
+			break;
+		case 0x100B6:
+			instr->type = instr_variable_syntax_intel[4];
+			break;
+		case 0x100B7:
+			instr->type = instr_variable_syntax_intel[5];
+			break;
+		case 0x100BE:
+			instr->type = instr_variable_syntax_intel[6];
+			break;
+		case 0x100BF:
+			instr->type = instr_variable_syntax_intel[7];
+			break;
+		case 0x100CA:
+			instr->type = instr_variable_syntax_intel[11];
+			break;
+		case 0x100CB:
+			instr->type = instr_variable_syntax_intel[12];
+			break;
+		case 0x100EA:
+			instr->type = instr_variable_syntax_intel[13];
+			break;
+		case 0x10198:
+			instr->type = instr_variable_syntax_intel[18];
+			break;
+		case 0x10199:
+			instr->type = instr_variable_syntax_intel[19];
 			break;
 		default:
 			decode_modrm_fields(instr, RAM[pc++]);
@@ -1320,6 +1391,27 @@ done_prefixes:
 				break;
 			case GROUP_5:
 				instr->type = grp5_decode_table[instr->reg_opc];
+				switch (instr->type) {
+				case INSTR_DIFF_SYNTAX:
+					switch ((use_intel << 8) | instr->reg_opc) {
+						case 0x3:
+							instr->type = instr_variable_syntax_att[10];
+							break;
+						case 0x5:
+							instr->type = instr_variable_syntax_att[13];
+							break;
+						case 0x103:
+							instr->type = instr_variable_syntax_intel[10];
+							instr->flags |= INTEL_FWORD;
+							break;
+						case 0x105:
+							instr->type = instr_variable_syntax_intel[13];
+							instr->flags |= INTEL_FWORD;
+							break;
+						default:
+							break;
+					}
+				}
 				break;
 			case GROUP_6:
 				instr->type = grp6_decode_table[instr->reg_opc];
@@ -1330,31 +1422,63 @@ done_prefixes:
 			case GROUP_7:
 				instr->type = grp7_decode_table[instr->reg_opc];
 				switch (instr->type) {
-				case INSTR_DIFF_NAME:
-					switch ((instr->op_size_override << 8) | instr->reg_opc) {
+				case INSTR_DIFF_SYNTAX:
+					switch ((use_intel << 16) | (instr->op_size_override << 8) | instr->reg_opc) {
 					case 0x0:
-						instr->type = instr_variable_name[0];
+						instr->type = instr_variable_syntax_att[0];
 						break;
 					case 0x1:
-						instr->type = instr_variable_name[1];
+						instr->type = instr_variable_syntax_att[1];
 						break;
 					case 0x2:
-						instr->type = instr_variable_name[2];
+						instr->type = instr_variable_syntax_att[2];
 						break;
 					case 0x3:
-						instr->type = instr_variable_name[3];
+						instr->type = instr_variable_syntax_att[3];
 						break;
 					case 0x100:
-						instr->type = instr_variable_name[6];
+						instr->type = instr_variable_syntax_att[14];
 						break;
 					case 0x101:
-						instr->type = instr_variable_name[7];
+						instr->type = instr_variable_syntax_att[15];
 						break;
 					case 0x102:
-						instr->type = instr_variable_name[8];
+						instr->type = instr_variable_syntax_att[16];
 						break;
 					case 0x103:
-						instr->type = instr_variable_name[9];
+						instr->type = instr_variable_syntax_att[17];
+						break;
+					case 0x10000:
+						instr->type = instr_variable_syntax_intel[0];
+						instr->flags |= INTEL_NO_PREFIX;
+						break;
+					case 0x10001:
+						instr->type = instr_variable_syntax_intel[1];
+						instr->flags |= INTEL_NO_PREFIX;
+						break;
+					case 0x10002:
+						instr->type = instr_variable_syntax_intel[2];
+						instr->flags |= INTEL_NO_PREFIX;
+						break;
+					case 0x10003:
+						instr->type = instr_variable_syntax_intel[3];
+						instr->flags |= INTEL_NO_PREFIX;
+						break;
+					case 0x10100:
+						instr->type = instr_variable_syntax_intel[14];
+						instr->flags |= INTEL_NO_PREFIX;
+						break;
+					case 0x10101:
+						instr->type = instr_variable_syntax_intel[15];
+						instr->flags |= INTEL_NO_PREFIX;
+						break;
+					case 0x10102:
+						instr->type = instr_variable_syntax_intel[16];
+						instr->flags |= INTEL_NO_PREFIX;
+						break;
+					case 0x10103:
+						instr->type = instr_variable_syntax_intel[17];
+						instr->flags |= INTEL_NO_PREFIX;
 						break;
 					default:
 						break;
@@ -1417,6 +1541,8 @@ done_rm:
 	decode_dst_operand(instr);
 
 	decode_third_operand(instr);
+
+	instr->nr_bytes = (unsigned long)(pc - start_pc);
 
 	return 0;
 }
