@@ -1,7 +1,7 @@
 /*
  * libcpu: x86_disasm.cpp
  *
- * disassembler
+ * disassembler (intel syntax)
  */
 
 #include <stdlib.h>
@@ -297,8 +297,8 @@ arch_x86_disasm_instr_intel(cpu_t *cpu, addr_t pc, char *line, unsigned int max_
 	char operands[32];
 	int len = 0;
 
-	assert(cpu->use_intel_syntax == 1);
-	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, cpu->use_intel_syntax) != 0) {
+	assert(((cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) == 1);
+	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0) {
 		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode);
 		exit(1);
 	}

@@ -95,7 +95,7 @@ arch_func_t arch_func_x86 = {
 	arch_8086_emit_decode_reg,
 	arch_8086_spill_reg_state,
 	arch_x86_tag_instr,
-	arch_x86_disasm_instr_att,
+	arch_x86_disasm_instr,
 	arch_8086_translate_cond,
 	arch_8086_translate_instr,
 	// idbg support

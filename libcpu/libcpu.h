@@ -257,8 +257,6 @@ typedef struct cpu {
 	uint64_t timer_start[TIMER_COUNT];
 
 	void *feptr; /* This pointer can be used freely by the frontend. */
-
-	char use_intel_syntax;
 } cpu_t;
 
 enum {
@@ -299,6 +297,11 @@ enum {
 #define CPU_DEBUG_PROFILE				(1<<5)
 #define CPU_DEBUG_INTEL_SYNTAX			(1<<6)
 #define CPU_DEBUG_ALL 0xFFFFFFFF
+
+//////////////////////////////////////////////////////////////////////
+// debug flag shifts
+//////////////////////////////////////////////////////////////////////
+#define CPU_DEBUG_INTEL_SYNTAX_SHIFT		6
 
 //////////////////////////////////////////////////////////////////////
 // hints

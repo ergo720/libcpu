@@ -15,7 +15,7 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 	struct x86_instr instr;
 	int len;
 
-	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, cpu->use_intel_syntax) != 0)
+	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0)
 		return -1;
 
 	len = arch_x86_instr_length(&instr);

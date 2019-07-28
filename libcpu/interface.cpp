@@ -134,7 +134,6 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu->flags_debug = CPU_DEBUG_NONE;
 	cpu->flags_hint = CPU_HINT_NONE;
 	cpu->flags = 0;
-	cpu->use_intel_syntax = 0;
 
 	// init the frontend
 	cpu->f.init(cpu, &cpu->info, &cpu->rf);
@@ -258,14 +257,6 @@ void
 cpu_set_flags_debug(cpu_t *cpu, uint32_t f)
 {
 	cpu->flags_debug = f;
-	if (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) {
-		cpu->f.disasm_instr = arch_x86_disasm_instr_intel;
-		cpu->use_intel_syntax = 1;
-	}
-	else {
-		cpu->f.disasm_instr = arch_x86_disasm_instr_att;
-		cpu->use_intel_syntax = 0;
-	}
 }
 
 void
