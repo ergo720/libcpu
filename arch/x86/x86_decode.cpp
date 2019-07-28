@@ -11,10 +11,11 @@
 /*
  * First byte of an element in 'decode_table_one' is the instruction type.
  */
-#define X86_INSTR_TYPE_MASK	0xff
+#define X86_INSTR_TYPE_MASK	0xFF
 
 #define INSTR_UNDEFINED		0	// non-existent instr
 #define INSTR_DIFF_SYNTAX	0	// instr has different syntax between intel and att
+#define USE_INTEL			0x10000
 
 #define Jb (ADDMODE_REL | WIDTH_BYTE)
 #define Jv (ADDMODE_REL | WIDTH_FULL)
@@ -638,52 +639,6 @@ static const uint32_t grp9_decode_table[8] = {
 	/*[0x07]*/	0,
 };
 
-static const uint32_t instr_variable_syntax_att[] = {
-	/*[0x0F0100]*/		INSTR_SGDTL,
-	/*[0x0F0108]*/		INSTR_SIDTL,
-	/*[0x0F0110]*/		INSTR_LGDTL,
-	/*[0x0F0118]*/		INSTR_LIDTL,
-	/*[0x0FB6]*/		INSTR_MOVZXB,
-	/*[0x0FB7]*/		INSTR_MOVZXW,
-	/*[0x0FBE]*/		INSTR_MOVSXB,
-	/*[0x0FBF]*/		INSTR_MOVSXW,
-	/*[0x98]*/			INSTR_CWTL,
-	/*[0x99]*/			INSTR_CLTD,
-	/*[0x9A,0xFF/3]*/	INSTR_LCALL,
-	/*[0xCA]*/			INSTR_LRET,
-	/*[0xCB]*/			INSTR_LRET,
-	/*[0xEA,0xFF/5]*/	INSTR_LJMP,
-	/*[0x660F0100]*/	INSTR_SGDTW,
-	/*[0x660F0108]*/	INSTR_SIDTW,
-	/*[0x660F0110]*/	INSTR_LGDTW,
-	/*[0x660F0118]*/	INSTR_LIDTW,
-	/*[0x6698]*/		INSTR_CBTV,
-	/*[0x6699]*/		INSTR_CWTD,
-};
-
-static const uint32_t instr_variable_syntax_intel[] = {
-	/*[0x0F0100]*/		INSTR_SGDTD,
-	/*[0x0F0108]*/		INSTR_SIDTD,
-	/*[0x0F0110]*/		INSTR_LGDTD,
-	/*[0x0F0118]*/		INSTR_LIDTD,
-	/*[0x0FB6]*/		INSTR_MOVZX,
-	/*[0x0FBE]*/		INSTR_MOVZX,
-	/*[0x0FBF]*/		INSTR_MOVSX,
-	/*[0x0FB7]*/		INSTR_MOVSX,
-	/*[0x98]*/			INSTR_CWDE,
-	/*[0x99]*/			INSTR_CDQ,
-	/*[0x9A,0xFF/3]*/	INSTR_CALL,
-	/*[0xCA]*/			INSTR_RETF,
-	/*[0xCB]*/			INSTR_RETF,
-	/*[0xEA,0xFF/5]*/	INSTR_JMP,
-	/*[0x660F0100]*/	INSTR_SGDTW,
-	/*[0x660F0108]*/	INSTR_SIDTW,
-	/*[0x660F0110]*/	INSTR_LGDTW,
-	/*[0x660F0118]*/	INSTR_LIDTW,
-	/*[0x6698]*/		INSTR_CBW,
-	/*[0x6699]*/		INSTR_CWD,
-};
-
 static void
 decode_third_operand(struct x86_instr* instr)
 {
@@ -1298,76 +1253,68 @@ done_prefixes:
 	if (instr->type == 0) {
 		switch ((use_intel << 16) | (instr->op_size_override << 8) | instr->opcode) {
 		case 0x98:
-			instr->type = instr_variable_syntax_att[8];
+			instr->type = INSTR_CWTL;
 			break;
 		case 0x99:
-			instr->type = instr_variable_syntax_att[9];
+			instr->type = INSTR_CLTD;
 			break;
 		case 0x9A:
-			instr->type = instr_variable_syntax_att[10];
+			instr->type = INSTR_LCALL;
 			break;
 		case 0xB6:
-			instr->type = instr_variable_syntax_att[4];
+			instr->type = INSTR_MOVZXB;
 			break;
 		case 0xB7:
-			instr->type = instr_variable_syntax_att[5];
+			instr->type = INSTR_MOVZXW;
 			break;
 		case 0xBE:
-			instr->type = instr_variable_syntax_att[6];
+			instr->type = INSTR_MOVSXB;
 			break;
 		case 0xBF:
-			instr->type = instr_variable_syntax_att[7];
+			instr->type = INSTR_MOVSXW;
 			break;
 		case 0xCA:
-			instr->type = instr_variable_syntax_att[11];
-			break;
 		case 0xCB:
-			instr->type = instr_variable_syntax_att[12];
+			instr->type = INSTR_LRET;
 			break;
 		case 0xEA:
-			instr->type = instr_variable_syntax_att[13];
+			instr->type = INSTR_LJMP;
 			break;
 		case 0x198:
-			instr->type = instr_variable_syntax_att[18];
+			instr->type = INSTR_CBTV;
 			break;
 		case 0x199:
-			instr->type = instr_variable_syntax_att[19];
+			instr->type = INSTR_CWTD;
 			break;
-		case 0x10098:
-			instr->type = instr_variable_syntax_intel[8];
+		case 0x98 | USE_INTEL:
+			instr->type = INSTR_CWDE;
 			break;
-		case 0x10099:
-			instr->type = instr_variable_syntax_intel[9];
+		case 0x99 | USE_INTEL:
+			instr->type = INSTR_CDQ;
 			break;
-		case 0x1009A:
-			instr->type = instr_variable_syntax_intel[10];
+		case 0x9A | USE_INTEL:
+			instr->type = INSTR_CALL;
 			break;
-		case 0x100B6:
-			instr->type = instr_variable_syntax_intel[4];
+		case 0xB6 | USE_INTEL:
+		case 0xB7 | USE_INTEL:
+			instr->type = INSTR_MOVZX;
 			break;
-		case 0x100B7:
-			instr->type = instr_variable_syntax_intel[5];
+		case 0xBE | USE_INTEL:
+		case 0xBF | USE_INTEL:
+			instr->type = INSTR_MOVSX;
 			break;
-		case 0x100BE:
-			instr->type = instr_variable_syntax_intel[6];
+		case 0xCA | USE_INTEL:
+		case 0xCB | USE_INTEL:
+			instr->type = INSTR_RETF;
 			break;
-		case 0x100BF:
-			instr->type = instr_variable_syntax_intel[7];
+		case 0xEA | USE_INTEL:
+			instr->type = INSTR_JMP;
 			break;
-		case 0x100CA:
-			instr->type = instr_variable_syntax_intel[11];
+		case 0x198 | USE_INTEL:
+			instr->type = INSTR_CBW;
 			break;
-		case 0x100CB:
-			instr->type = instr_variable_syntax_intel[12];
-			break;
-		case 0x100EA:
-			instr->type = instr_variable_syntax_intel[13];
-			break;
-		case 0x10198:
-			instr->type = instr_variable_syntax_intel[18];
-			break;
-		case 0x10199:
-			instr->type = instr_variable_syntax_intel[19];
+		case 0x199 | USE_INTEL:
+			instr->type = INSTR_CWD;
 			break;
 		default:
 			decode_modrm_fields(instr, RAM[pc++]);
@@ -1393,19 +1340,19 @@ done_prefixes:
 				instr->type = grp5_decode_table[instr->reg_opc];
 				switch (instr->type) {
 				case INSTR_DIFF_SYNTAX:
-					switch ((use_intel << 8) | instr->reg_opc) {
+					switch ((use_intel << 16) | instr->reg_opc) {
 						case 0x3:
-							instr->type = instr_variable_syntax_att[10];
+							instr->type = INSTR_LCALL;
 							break;
 						case 0x5:
-							instr->type = instr_variable_syntax_att[13];
+							instr->type = INSTR_LJMP;
 							break;
-						case 0x103:
-							instr->type = instr_variable_syntax_intel[10];
+						case 0x3 | USE_INTEL:
+							instr->type = INSTR_CALL;
 							instr->flags |= INTEL_FWORD;
 							break;
-						case 0x105:
-							instr->type = instr_variable_syntax_intel[13];
+						case 0x5 | USE_INTEL:
+							instr->type = INSTR_JMP;
 							instr->flags |= INTEL_FWORD;
 							break;
 						default:
@@ -1425,59 +1372,59 @@ done_prefixes:
 				case INSTR_DIFF_SYNTAX:
 					switch ((use_intel << 16) | (instr->op_size_override << 8) | instr->reg_opc) {
 					case 0x0:
-						instr->type = instr_variable_syntax_att[0];
+						instr->type = INSTR_SGDTL;
 						break;
 					case 0x1:
-						instr->type = instr_variable_syntax_att[1];
+						instr->type = INSTR_SIDTL;
 						break;
 					case 0x2:
-						instr->type = instr_variable_syntax_att[2];
+						instr->type = INSTR_LGDTL;
 						break;
 					case 0x3:
-						instr->type = instr_variable_syntax_att[3];
+						instr->type = INSTR_LIDTL;
 						break;
 					case 0x100:
-						instr->type = instr_variable_syntax_att[14];
+						instr->type = INSTR_SGDTW;
 						break;
 					case 0x101:
-						instr->type = instr_variable_syntax_att[15];
+						instr->type = INSTR_SIDTW;
 						break;
 					case 0x102:
-						instr->type = instr_variable_syntax_att[16];
+						instr->type = INSTR_LGDTW;
 						break;
 					case 0x103:
-						instr->type = instr_variable_syntax_att[17];
+						instr->type = INSTR_LIDTW;
 						break;
-					case 0x10000:
-						instr->type = instr_variable_syntax_intel[0];
+					case 0x0 | USE_INTEL:
+						instr->type = INSTR_SGDTD;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
-					case 0x10001:
-						instr->type = instr_variable_syntax_intel[1];
+					case 0x1 | USE_INTEL:
+						instr->type = INSTR_SIDTD;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
-					case 0x10002:
-						instr->type = instr_variable_syntax_intel[2];
+					case 0x2 | USE_INTEL:
+						instr->type = INSTR_LGDTD;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
-					case 0x10003:
-						instr->type = instr_variable_syntax_intel[3];
+					case 0x3 | USE_INTEL:
+						instr->type = INSTR_LIDTD;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
-					case 0x10100:
-						instr->type = instr_variable_syntax_intel[14];
+					case 0x100 | USE_INTEL:
+						instr->type = INSTR_SGDTW;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
-					case 0x10101:
-						instr->type = instr_variable_syntax_intel[15];
+					case 0x101 | USE_INTEL:
+						instr->type = INSTR_SIDTW;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
-					case 0x10102:
-						instr->type = instr_variable_syntax_intel[16];
+					case 0x102 | USE_INTEL:
+						instr->type = INSTR_LGDTW;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
-					case 0x10103:
-						instr->type = instr_variable_syntax_intel[17];
+					case 0x103 | USE_INTEL:
+						instr->type = INSTR_LIDTW;
 						instr->flags |= INTEL_NO_PREFIX;
 						break;
 					default:
