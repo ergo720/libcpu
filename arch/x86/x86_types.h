@@ -70,7 +70,11 @@ PACKED(struct reg_x86_s {
 	DEFINE_REG32(cr2);
 	DEFINE_REG32(cr3);
 	DEFINE_REG32(cr4);
-	/* FPU registers */
+	// TODO: GDTR, LDTR, IDTR, task, MTRR, MSR, MMX, SSE, debug regs
+});
+typedef struct reg_x86_s reg_x86_t;
+
+PACKED(struct fpr_x86_s {
 	DEFINE_REG80(st0);
 	DEFINE_REG80(st1);
 	DEFINE_REG80(st2);
@@ -79,12 +83,11 @@ PACKED(struct reg_x86_s {
 	DEFINE_REG80(st5);
 	DEFINE_REG80(st6);
 	DEFINE_REG80(st7);
-	DEFINE_REG16(ctrl);
-	DEFINE_REG16(status);
-	DEFINE_REG16(tag);
-	DEFINE_REG16(opcode); // 11-bit reg
-	DEFINE_REG48(last_instr_ptr);
-	DEFINE_REG48(last_data_ptr);
-	// TODO: GDTR, LDTR, IDTR, task, MTRR, MSR, MMX, SSE, debug regs
+	//DEFINE_REG16(ctrl);
+	//DEFINE_REG16(status);
+	//DEFINE_REG16(tag);
+	//DEFINE_REG16(opcode); // 11-bit reg
+	//DEFINE_REG48(last_instr_ptr);
+	//DEFINE_REG48(last_data_ptr);
 });
-typedef struct reg_x86_s reg_x86_t;
+typedef struct fpr_x86_s fpr_x86_t;

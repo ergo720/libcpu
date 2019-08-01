@@ -81,10 +81,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 
 	llvm::InitializeNativeTarget();
 
-	cpu = new cpu_t;
+	cpu = new cpu_t();
 	assert(cpu != NULL);
-	memset(&cpu->info, 0, sizeof(cpu->info));
-	memset(&cpu->rf, 0, sizeof(cpu->rf));
 
 	cpu->info.type = arch;
 	cpu->info.name = "noname";

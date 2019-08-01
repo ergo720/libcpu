@@ -18,7 +18,7 @@ arch_8086_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 }
 
 static int
-arch_8086_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
+arch_x86_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	return 0;
 }
@@ -26,6 +26,9 @@ arch_8086_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 static void
 arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
+	reg_x86_t *reg;
+	fpr_x86_t *fp_reg;
+
 	info->name = "X86";
 	info->full_name = "Intel Pentium III";
 
@@ -39,39 +42,41 @@ arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->register_count[CPU_REG_GPR]	= 8;
 	info->register_size[CPU_REG_GPR]	= info->word_size;
 
-	info->register_count[CPU_REG_FPR] = 8;
-	info->register_size[CPU_REG_FPR] = info->float_size;
+	info->register_count[CPU_REG_FPR]	= 8;
+	info->register_size[CPU_REG_FPR]	= info->float_size;
 
 	info->register_count[CPU_REG_XR]	= 0;
 	info->register_size[CPU_REG_XR]		= 0;
 
-	reg_x86_t *reg;
 	reg = (reg_x86_t*)calloc(1, sizeof(reg_x86_t));
+	fp_reg = (fpr_x86_t*)calloc(1, sizeof(fpr_x86_t));
 	assert(reg != NULL);
+	assert(fp_reg != NULL);
 
 	rf->pc	= &reg->eip;
 	rf->grf	= reg;
+	rf->frf = fp_reg;
 }
 
 static void
-arch_8086_done(cpu_t *cpu)
+arch_x86_done(cpu_t *cpu)
 {
-	free(cpu->feptr);
 	free(cpu->rf.grf);
+	free(cpu->rf.frf);
 }
 
 static void
-arch_8086_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
+arch_x86_emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 }
 
 static void
-arch_8086_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
+arch_x86_spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 }
 
 static addr_t
-arch_8086_get_pc(cpu_t *, void *reg)
+arch_x86_get_pc(cpu_t *, void *reg)
 {
 	return ((reg_x86_t*)reg)->eip;
 }
@@ -90,14 +95,14 @@ arch_8086_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 
 arch_func_t arch_func_x86 = {
 	arch_x86_init,
-	arch_8086_done,
-	arch_8086_get_pc,
-	arch_8086_emit_decode_reg,
-	arch_8086_spill_reg_state,
+	arch_x86_done,
+	arch_x86_get_pc,
+	arch_x86_emit_decode_reg,
+	arch_x86_spill_reg_state,
 	arch_x86_tag_instr,
 	arch_x86_disasm_instr,
 	arch_8086_translate_cond,
-	arch_8086_translate_instr,
+	arch_x86_translate_instr,
 	// idbg support
 	arch_8086_get_psr,
 	arch_8086_get_reg,
