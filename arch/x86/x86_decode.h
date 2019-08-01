@@ -132,14 +132,6 @@ enum x86_instr_flags : uint64_t {
 	GROUP_8			= (1ULL << 54),
 	GROUP_9			= (1ULL << 55),
 	GROUP_MASK		= GROUP_1|GROUP_2|GROUP_3|GROUP_4|GROUP_5|GROUP_6|GROUP_7|GROUP_8|GROUP_9,
-
-	/* Syntax specific flags */
-	ATT_NO_SUFFIX	= (1ULL << 56),
-	INTEL_NO_PREFIX	= (1ULL << 57),
-	INTEL_BYTE		= (1ULL << 58),
-	INTEL_WORD		= (1ULL << 59),
-	INTEL_QWORD		= (1ULL << 60),
-	INTEL_FWORD		= (1ULL << 61),
 };
 
 /*
@@ -201,6 +193,7 @@ struct x86_instr {
 	unsigned char		lock_prefix;
 	unsigned char		addr_size_override;
 	unsigned char		op_size_override;
+	unsigned char		is_two_byte_instr;
 	struct x86_operand	src;
 	struct x86_operand	dst;
 	struct x86_operand	third;

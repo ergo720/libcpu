@@ -209,9 +209,83 @@ static const char *to_dbg_reg_name(struct x86_instr *instr, unsigned int reg_num
 	return dbg_reg_names[reg_num];
 }
 
+static bool check_suffix_override(struct x86_instr *instr)
+{
+	switch (instr->type) {
+	case INSTR_ARPL:
+	case INSTR_RET:
+	case INSTR_ENTER:
+	case INSTR_LRET:
+	case INSTR_INT:
+	case INSTR_AAM:
+	case INSTR_AAD:
+	case INSTR_LOOPNE:
+	case INSTR_LOOPE:
+	case INSTR_LOOP:
+	case INSTR_JECXZ:
+		if (instr->is_two_byte_instr == 0)
+			return true;
+		break;
+	case INSTR_JO:
+	case INSTR_JNO:
+	case INSTR_JB:
+	case INSTR_JNB:
+	case INSTR_JZ:
+	case INSTR_JNE:
+	case INSTR_JBE:
+	case INSTR_JA:
+	case INSTR_JS:
+	case INSTR_JNS:
+	case INSTR_JPE:
+	case INSTR_JPO:
+	case INSTR_JL:
+	case INSTR_JGE:
+	case INSTR_JLE:
+	case INSTR_JG:
+		return true;
+	case INSTR_LMSW:
+	case INSTR_INVLPG:
+	case INSTR_LLDT:
+	case INSTR_LTR:
+	case INSTR_VERR:
+	case INSTR_VERW:
+	case INSTR_SETO:
+	case INSTR_SETNO:
+	case INSTR_SETB:
+	case INSTR_SETNB:
+	case INSTR_SETZ:
+	case INSTR_SETNE:
+	case INSTR_SETBE:
+	case INSTR_SETA:
+	case INSTR_SETS:
+	case INSTR_SETNS:
+	case INSTR_SETPE:
+	case INSTR_SETPO:
+	case INSTR_SETL:
+	case INSTR_SETGE:
+	case INSTR_SETLE:
+	case INSTR_SETG:
+	case INSTR_CMPXCHG8B:
+	case INSTR_BSWAP:
+		if (instr->is_two_byte_instr == 1)
+			return true;
+		break;
+	default:
+		switch (instr->opcode) {
+		case 0xEB: // jmp
+			if (instr->is_two_byte_instr == 0)
+				return true;
+		default:
+			break;
+		}
+	}
+
+	return false;
+}
+
 static const char *add_instr_suffix(struct x86_instr *instr)
 {
-	if (instr->flags & ATT_NO_SUFFIX ||
+	if (check_suffix_override(instr) ||
 		!(instr->flags & (WIDTH_BYTE | WIDTH_WORD | WIDTH_FULL | WIDTH_QWORD)))
 		return "";
 

@@ -209,21 +209,68 @@ static const char *to_dbg_reg_name(struct x86_instr *instr, unsigned int reg_num
 	return dbg_reg_names[reg_num];
 }
 
+static const char *check_prefix_override(struct x86_instr *instr)
+{
+	switch (instr->type) {
+	case INSTR_LES:
+	case INSTR_LDS:
+		if (instr->is_two_byte_instr == 0)
+			return "FWORD PTR ";
+		break;
+	case INSTR_LSS:
+	case INSTR_LFS:
+	case INSTR_LGS:
+	case INSTR_SGDTD:
+	case INSTR_SIDTD:
+	case INSTR_LGDTD:
+	case INSTR_LIDTD:
+	case INSTR_SGDTW:
+	case INSTR_SIDTW:
+	case INSTR_LGDTW:
+	case INSTR_LIDTW:
+		if (instr->is_two_byte_instr == 1)
+			return "";
+		break;
+	case INSTR_LAR:
+	case INSTR_LSL:
+		if (instr->is_two_byte_instr == 1)
+			return "WORD PTR ";
+		break;
+	default:
+		switch (instr->opcode) {
+		case 0xFF: // call, jmp
+			if (instr->is_two_byte_instr == 0 && (instr->reg_opc == 3 || instr->reg_opc == 5))
+				return "FWORD PTR ";
+			break;
+		case 0xB6: // movzx
+		case 0xBE: // movsx
+			if (instr->is_two_byte_instr == 1)
+				return "BYTE PTR ";
+			break;
+		case 0xB7: // movzx
+		case 0xBF: // movsx
+			if (instr->is_two_byte_instr == 1)
+				return "WORD PTR ";
+			break;
+		default:
+			break;
+		}
+	}
+
+	return NULL;
+}
+
 static const char *add_operand_prefix(struct x86_instr *instr)
 {
-	if (instr->flags & INTEL_NO_PREFIX)
-		return "";
+	const char *prefix = check_prefix_override(instr);
 
-	if (instr->flags & INTEL_FWORD)
-		return "FWORD PTR ";
+	if (prefix != NULL)
+		return prefix;
 
-	if (instr->flags & INTEL_QWORD)
-		return "QWORD PTR ";
-
-	if (instr->flags & WIDTH_BYTE || instr->flags & INTEL_BYTE)
+	if (instr->flags & WIDTH_BYTE)
 		return "BYTE PTR ";
 
-	if (instr->flags & WIDTH_WORD || instr->flags & INTEL_WORD)
+	if (instr->flags & WIDTH_WORD)
 		return "WORD PTR ";
 
 	if (instr->flags & WIDTH_FULL)
