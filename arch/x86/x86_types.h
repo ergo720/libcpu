@@ -53,10 +53,10 @@ PACKED(struct reg_x86_s {
 	/* Pointer registers */
 	DEFINE_SPLIT_REG16(ebp, bp);
 	DEFINE_SPLIT_REG16(esp, sp);
-	/* Special purpose registers */
-	DEFINE_REG32(eip);
 	/* Eflags register */
 	DEFINE_REG32(eflags);
+	/* Special purpose registers */
+	DEFINE_REG32(eip);
 	/* Segment registers */
 	DEFINE_REG16(cs);
 	DEFINE_REG16(ds);

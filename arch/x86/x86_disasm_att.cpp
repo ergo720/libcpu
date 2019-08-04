@@ -12,11 +12,7 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-static const char *mnemo[] = {
-#define DECLARE_INSTR(name,str) str,
-#include "x86_instr.h"
-#undef DECLARE_INSTR
-};
+extern const char *mnemo[];
 
 static const char *to_mnemonic(struct x86_instr *instr)
 {

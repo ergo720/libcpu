@@ -20,12 +20,88 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 
 	len = arch_x86_instr_length(&instr);
 
-	if (cpu->RAM[pc] == 0xCD && cpu->RAM[pc+1] == 0x20) {
-		//XXX DOS-specific hack to end tagging when an "int $0x20" is encountered
+	switch (instr.type) {
+	case INSTR_JO:
+	case INSTR_JNO:
+	case INSTR_JB:
+	case INSTR_JNB:
+	case INSTR_JZ:
+	case INSTR_JNE:
+	case INSTR_JBE:
+	case INSTR_JA:
+	case INSTR_JS:
+	case INSTR_JNS:
+	case INSTR_JPE:
+	case INSTR_JPO:
+	case INSTR_JL:
+	case INSTR_JGE:
+	case INSTR_JLE:
+	case INSTR_JG:
+		*new_pc = pc + len + instr.rel_data[0];
+		*tag = TAG_COND_BRANCH;
+		break;
+	case INSTR_JMP:
+	case INSTR_LJMP:
+		switch (instr.opcode) {
+		case 0xE9:
+		case 0xEB:
+			*new_pc = pc + len + instr.rel_data[0];
+			break;
+		case 0xEA:
+			*new_pc = NEW_PC_NONE;
+			break;
+		case 0xFF:
+			*new_pc = NEW_PC_NONE;
+			break;
+		default:
+			break;
+		}
+		*tag = TAG_BRANCH;
+		break;
+	case INSTR_LOOP:
+	case INSTR_LOOPE:
+	case INSTR_LOOPNE:
+		*new_pc = pc + len + instr.rel_data[0];
+		*tag = TAG_COND_BRANCH;
+		break;
+	case INSTR_CALL:
+	case INSTR_LCALL:
+	case INSTR_SYSENTER:
+		switch (instr.opcode) {
+		case 0x34:
+			*new_pc = NEW_PC_NONE;
+			break;
+		case 0x9A:
+			*new_pc = NEW_PC_NONE;
+			break;
+		case 0xE8:
+			*new_pc = pc + len + instr.rel_data[0];
+			break;
+		case 0xFF:
+			*new_pc = NEW_PC_NONE;
+			break;
+		default:
+			break;
+		}
+		*tag = TAG_CALL;
+		break;
+	case INSTR_RET:
+	case INSTR_LRET:
+	case INSTR_RETF:
+	case INSTR_IRET:
+	case INSTR_SYSEXIT:
 		*tag = TAG_RET;
-	} else {
+		break;
+	case INSTR_INT:
+	case INSTR_INTO:
+	case INSTR_INT3:
+	case INSTR_BOUND:
+		*tag = TAG_TRAP;
+		break;
+	default:
 		*tag = TAG_CONTINUE;
-	}	
+		break;
+	}
 
 	*next_pc = pc + len;
 
