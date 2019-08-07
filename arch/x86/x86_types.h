@@ -44,15 +44,15 @@
 PACKED(struct reg_x86_s {
 	/* General registers */
 	DEFINE_SPLIT_REG8(eax, ax, ah, al);
-	DEFINE_SPLIT_REG8(ebx, bx, bh, bl);
 	DEFINE_SPLIT_REG8(ecx, cx, ch, cl);
 	DEFINE_SPLIT_REG8(edx, dx, dh, dl);
+	DEFINE_SPLIT_REG8(ebx, bx, bh, bl);
+	/* Pointer registers */
+	DEFINE_SPLIT_REG16(esp, sp);
+	DEFINE_SPLIT_REG16(ebp, bp);
 	/* Index registers */
 	DEFINE_SPLIT_REG16(esi, si);
 	DEFINE_SPLIT_REG16(edi, di);
-	/* Pointer registers */
-	DEFINE_SPLIT_REG16(ebp, bp);
-	DEFINE_SPLIT_REG16(esp, sp);
 	/* Eflags register */
 	DEFINE_REG32(eflags);
 	/* Special purpose registers */

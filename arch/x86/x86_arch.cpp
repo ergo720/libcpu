@@ -110,25 +110,25 @@ arch_x86_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 		*value = ((reg_x86_t*)reg)->eax;
 		break;
 	case 1:
-		*value = ((reg_x86_t*)reg)->ebx;
-		break;
-	case 2:
 		*value = ((reg_x86_t*)reg)->ecx;
 		break;
-	case 3:
+	case 2:
 		*value = ((reg_x86_t*)reg)->edx;
 		break;
+	case 3:
+		*value = ((reg_x86_t*)reg)->ebx;
+		break;
 	case 4:
-		*value = ((reg_x86_t *)reg)->esi;
+		*value = ((reg_x86_t*)reg)->esp;
 		break;
 	case 5:
-		*value = ((reg_x86_t *)reg)->edi;
+		*value = ((reg_x86_t*)reg)->ebp;
 		break;
 	case 6:
-		*value = ((reg_x86_t *)reg)->ebp;
+		*value = ((reg_x86_t*)reg)->esi;
 		break;
 	case 7:
-		*value = ((reg_x86_t *)reg)->esp;
+		*value = ((reg_x86_t*)reg)->edi;
 		break;
 	default:
 		return -1;
@@ -144,7 +144,7 @@ arch_func_t arch_func_x86 = {
 	arch_x86_spill_reg_state,
 	arch_x86_tag_instr,
 	arch_x86_disasm_instr,
-	arch_8086_translate_cond,
+	arch_x86_translate_cond,
 	arch_x86_translate_instr,
 	// idbg support
 	arch_x86_get_psr,

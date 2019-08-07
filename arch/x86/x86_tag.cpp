@@ -37,6 +37,9 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 	case INSTR_JGE:
 	case INSTR_JLE:
 	case INSTR_JG:
+	case INSTR_LOOP:
+	case INSTR_LOOPE:
+	case INSTR_LOOPNE:
 		*new_pc = pc + len + instr.rel_data[0];
 		*tag = TAG_COND_BRANCH;
 		break;
@@ -57,12 +60,6 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 			break;
 		}
 		*tag = TAG_BRANCH;
-		break;
-	case INSTR_LOOP:
-	case INSTR_LOOPE:
-	case INSTR_LOOPNE:
-		*new_pc = pc + len + instr.rel_data[0];
-		*tag = TAG_COND_BRANCH;
 		break;
 	case INSTR_CALL:
 	case INSTR_LCALL:

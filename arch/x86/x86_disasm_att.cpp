@@ -12,7 +12,11 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-extern const char *mnemo[];
+static const char *mnemo[] = {
+#define DECLARE_INSTR(name,str) str,
+#include "x86_instr.h"
+#undef DECLARE_INSTR
+};
 
 static const char *to_mnemonic(struct x86_instr *instr)
 {
@@ -282,7 +286,7 @@ static bool check_suffix_override(struct x86_instr *instr)
 static const char *add_instr_suffix(struct x86_instr *instr)
 {
 	if (check_suffix_override(instr) ||
-		!(instr->flags & (WIDTH_BYTE | WIDTH_WORD | WIDTH_FULL | WIDTH_QWORD)))
+		!(instr->flags & (WIDTH_BYTE | WIDTH_WORD | WIDTH_DWORD | WIDTH_QWORD)))
 		return "";
 
 	if (instr->flags & WIDTH_BYTE)
@@ -291,7 +295,7 @@ static const char *add_instr_suffix(struct x86_instr *instr)
 	if (instr->flags & WIDTH_WORD)
 		return "w";
 
-	if (instr->flags & WIDTH_FULL)
+	if (instr->flags & WIDTH_DWORD)
 		return "l";
 
 	return "q";

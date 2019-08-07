@@ -1,7 +1,7 @@
 #include "libcpu.h"
 
 /* emitter functions */
-Value *arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb);
+Value *arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb, uint32_t shift = 0);
 Value *arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext, BasicBlock *bb);
 Value *arch_load32_aligned(cpu_t *cpu, Value *a, BasicBlock *bb);
 void arch_store32_aligned(cpu_t *cpu, Value *v, Value *a, BasicBlock *bb);
@@ -163,6 +163,8 @@ uint32_t RAM32LE(uint8_t *RAM, addr_t a);
 
 /* interface to the GPRs */
 #define R(i) arch_get_reg(cpu, i, 0, bb)
+#define R8(i) arch_get_reg(cpu, i, 8, bb)
+#define R16(i) arch_get_reg(cpu, i, 16, bb)
 #define R32(i) arch_get_reg(cpu, i, 32, bb)
 
 #define LET(i,v) arch_put_reg(cpu, i, v, 0, false, bb)
@@ -186,6 +188,9 @@ uint32_t RAM32LE(uint8_t *RAM, addr_t a);
 #define LOAD16(i,v) arch_put_reg(cpu, i, arch_load16_aligned(cpu,v,bb), 16, false, bb)
 #define LOAD16S(i,v) arch_put_reg(cpu, i, arch_load16_aligned(cpu,v,bb), 16, true, bb)
 #define LOAD32(i,v) arch_put_reg(cpu, i, arch_load32_aligned(cpu,v,bb), 32, true, bb)
+
+#define LOADMEM16(v) arch_load16_aligned(cpu,v,bb)
+#define LOADMEM32(v) arch_load32_aligned(cpu,v,bb)
 
 #define STORE8(v,a) arch_store8(cpu,v, a, bb)
 #define STORE16(v,a) arch_store16(cpu,v, a, bb)

@@ -61,10 +61,10 @@ enum x86_instr_flags : uint64_t {
 
 	/* Operand sizes */
 	WIDTH_BYTE		= (1ULL << 11),	/* 8 bits */
-	WIDTH_WORD		= (1ULL << 12), /* 16 bits only */
-	WIDTH_FULL		= (1ULL << 13),	/* 16 bits or 32 bits */
+	WIDTH_WORD		= (1ULL << 12), /* 16 bits */
+	WIDTH_DWORD		= (1ULL << 13),	/* 32 bits */
 	WIDTH_QWORD		= (1ULL << 14),	/* 64 bits */
-	WIDTH_MASK		= WIDTH_BYTE|WIDTH_WORD|WIDTH_FULL,
+	WIDTH_MASK		= WIDTH_BYTE|WIDTH_WORD| WIDTH_DWORD,
 
 	/* Source operand */
 	SRC_NONE		= (1ULL << 15),
@@ -173,7 +173,6 @@ struct x86_instr {
 	unsigned long		nr_bytes;
 
 	uint8_t			opcode;		/* Opcode byte */
-	uint8_t			width;
 	uint8_t			mod;		/* Mod */
 	uint8_t			rm;		/* R/M */
 	uint8_t			reg_opc;	/* Reg/Opcode */

@@ -12,7 +12,11 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-extern const char *mnemo[];
+static const char *mnemo[] = {
+#define DECLARE_INSTR(name,str) str,
+#include "x86_instr.h"
+#undef DECLARE_INSTR
+};
 
 static const char *to_mnemonic(struct x86_instr *instr)
 {
@@ -269,7 +273,7 @@ static const char *add_operand_prefix(struct x86_instr *instr)
 	if (instr->flags & WIDTH_WORD)
 		return "WORD PTR ";
 
-	if (instr->flags & WIDTH_FULL)
+	if (instr->flags & WIDTH_DWORD)
 		return "DWORD PTR ";
 
 	return "QWORD PTR ";

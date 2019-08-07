@@ -29,7 +29,7 @@
 
 // GET REGISTER
 Value *
-arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
+arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb, uint32_t shift) {
 	Value *v;
 	Value **regs = cpu->ptr_gpr;
 	uint32_t size = cpu->info.register_size[CPU_REG_GPR];
@@ -59,8 +59,12 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	v = new LoadInst(regs[index], "", false, bb);
 
 	/* optionally truncate it */
-	if (bits != 0 && bits < size)
+	if (bits != 0 && bits < size) {
 		v = TRUNC(bits, v);
+		if (shift) {
+			v = LSHR(v, CONSTs(32, shift));
+		}
+	}
 
 	return v;
 }
