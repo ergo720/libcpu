@@ -563,7 +563,9 @@ static inline unsigned
 gpr_size_to_type(cpu_t *cpu)
 {
 	unsigned format = F_INVALID;
-	uint32_t size = cpu->info.register_size[CPU_REG_GPR];
+
+	// XXX: this will work as long as all GPRs have the same size
+	uint32_t size = cpu->info.register_layout[cpu->info.register_offset[CPU_REG_GPR]].bits_size;
 
 	if (size <= 8)
 		format = F_BYTE;
@@ -583,7 +585,9 @@ static inline unsigned
 fpr_size_to_type(cpu_t *cpu)
 {
 	unsigned format = F_INVALID;
-	uint32_t size = cpu->info.register_size[CPU_REG_FPR];
+
+	// XXX: this will work as long as all FPRs have the same size
+	uint32_t size = cpu->info.register_layout[cpu->info.register_offset[CPU_REG_FPR]].bits_size;
 
 	if (size == 32)
 		format = F_FLOAT32;

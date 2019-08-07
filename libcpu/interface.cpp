@@ -38,36 +38,48 @@ extern arch_func_t arch_func_fapra;
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
 
 static inline bool
-is_valid_gpr_size(size_t size)
+is_valid_gpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	switch (size) {
+	for (; offset < count; offset++) {
+		size_t size = cpu->info.register_layout[offset].bits_size;
+		switch (size) {
 		case 0: case 1: case 8: case 16: case 32: case 64:
-			return true;
+			break;
 		default:
 			return false;
+		}
 	}
+	return true;
 }
 
 static inline bool
-is_valid_fpr_size(size_t size)
+is_valid_fpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	switch (size) {
+	for (; offset < count; offset++) {
+		size_t size = cpu->info.register_layout[offset].bits_size;
+		switch (size) {
 		case 0: case 32: case 64: case 80: case 128:
-			return true;
+			break;
 		default:
 			return false;
+		}
 	}
+	return true;
 }
 
 static inline bool
-is_valid_vr_size(size_t size)
+is_valid_vr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	switch (size) {
+	for (; offset < count; offset++) {
+		size_t size = cpu->info.register_layout[offset].bits_size;
+		switch (size) {
 		case 0: case 64: case 128:
-			return true;
+			break;
 		default:
 			return false;
+		}
 	}
+	return true;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -136,14 +148,24 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	// init the frontend
 	cpu->f.init(cpu, &cpu->info, &cpu->rf);
 
-	assert(is_valid_gpr_size(cpu->info.register_size[CPU_REG_GPR]) &&
+	size_t offset = 0;
+	cpu->info.register_offset[CPU_REG_GPR] = offset;
+	offset += cpu->info.register_count[CPU_REG_GPR];
+	cpu->info.register_offset[CPU_REG_XR] = offset;
+	offset += cpu->info.register_count[CPU_REG_XR];
+	cpu->info.register_offset[CPU_REG_FPR] = offset;
+	offset += cpu->info.register_count[CPU_REG_FPR];
+	cpu->info.register_offset[CPU_REG_VR] = offset;
+
+	assert(is_valid_gpr_size(cpu, offset, cpu->info.register_offset[CPU_REG_GPR]) &&
 		"the specified GPR size is not guaranteed to work");
-	assert(is_valid_fpr_size(cpu->info.register_size[CPU_REG_FPR]) &&
-		"the specified FPR size is not guaranteed to work");
-	assert(is_valid_vr_size(cpu->info.register_size[CPU_REG_VR]) &&
-		"the specified VR size is not guaranteed to work");
-	assert(is_valid_gpr_size(cpu->info.register_size[CPU_REG_XR]) &&
+	assert(is_valid_gpr_size(cpu, offset, cpu->info.register_offset[CPU_REG_XR]) &&
 		"the specified XR size is not guaranteed to work");
+	assert(is_valid_fpr_size(cpu, offset, cpu->info.register_offset[CPU_REG_FPR]) &&
+		"the specified FPR size is not guaranteed to work");
+	assert(is_valid_vr_size(cpu, offset, cpu->info.register_offset[CPU_REG_VR]) &&
+		"the specified VR size is not guaranteed to work");
+
 
 	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
 	if (count != 0) {

@@ -171,7 +171,7 @@ void
 arch_store_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 	BasicBlock *bb)
 {
-	uint32_t size = cpu->info.register_size[CPU_REG_FPR];
+	uint32_t size = cpu->info.float_size;
 
 	/*
 	 * if the caller cares about bit size and
@@ -194,7 +194,7 @@ arch_load_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits,
 	BasicBlock *bb)
 {
 	Value *v = NULL;
-	uint32_t size = cpu->info.register_size[CPU_REG_FPR];
+	uint32_t size = cpu->info.float_size;
 
 	if (size == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) {
 		v = arch_synthesize_fp80_load(cpu, index * 2, bb);

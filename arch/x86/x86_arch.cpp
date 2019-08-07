@@ -11,6 +11,42 @@
 #include "frontend.h"
 #include "x86_internal.h"
 
+static cpu_register_layout_t arch_x86_reg_layout[] = {
+	{ 0, 32, 0, 0, 0, "EAX" },
+	{ 0, 32, 0, 0, 0, "ECX" },
+	{ 0, 32, 0, 0, 0, "EDX" },
+	{ 0, 32, 0, 0, 0, "EBX" },
+	{ 0, 32, 0, 0, 0, "ESP" },
+	{ 0, 32, 0, 0, 0, "EBP" },
+	{ 0, 32, 0, 0, 0, "ESI" },
+	{ 0, 32, 0, 0, 0, "EDI" },
+	{ 0, 32, 0, 0, 0, "EFLAGS" },
+	{ 0, 16, 0, 0, 0, "ES" },
+	{ 0, 16, 0, 0, 0, "CS" },
+	{ 0, 16, 0, 0, 0, "SS" },
+	{ 0, 16, 0, 0, 0, "DS" },
+	{ 0, 16, 0, 0, 0, "FS" },
+	{ 0, 16, 0, 0, 0, "GS" },
+	{ 0, 32, 0, 0, 0, "CR0" },
+	{ 0, 32, 0, 0, 0, "CR2" },
+	{ 0, 32, 0, 0, 0, "CR3" },
+	{ 0, 32, 0, 0, 0, "CR4" },
+	{ 0, 32, 0, 0, 0, "DR0" },
+	{ 0, 32, 0, 0, 0, "DR1" },
+	{ 0, 32, 0, 0, 0, "DR2" },
+	{ 0, 32, 0, 0, 0, "DR3" },
+	{ 0, 32, 0, 0, 0, "DR6" },
+	{ 0, 32, 0, 0, 0, "DR7" },
+	{ 0, 80, 0, 0, 0, "ST0" },
+	{ 0, 80, 0, 0, 0, "ST1" },
+	{ 0, 80, 0, 0, 0, "ST2" },
+	{ 0, 80, 0, 0, 0, "ST3" },
+	{ 0, 80, 0, 0, 0, "ST4" },
+	{ 0, 80, 0, 0, 0, "ST5" },
+	{ 0, 80, 0, 0, 0, "ST6" },
+	{ 0, 80, 0, 0, 0, "ST7" },
+};
+
 static cpu_flags_layout_t arch_x86_flags_layout[] = {
 	{ ID_SHIFT, 0, "ID" }, /* cpuid supported */
 	{ VIP_SHIFT, 0, "VIP" }, /* virtual interrupt pending */
@@ -51,13 +87,9 @@ arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->psr_size = 32;
 
 	info->register_count[CPU_REG_GPR] = 8;
-	info->register_size[CPU_REG_GPR] = info->word_size;
-
 	info->register_count[CPU_REG_FPR] = 8;
-	info->register_size[CPU_REG_FPR] = info->float_size;
-
-	info->register_count[CPU_REG_XR] = 1;
-	info->register_size[CPU_REG_XR] = info->word_size;
+	info->register_count[CPU_REG_XR] = 17;
+	info->register_layout = arch_x86_reg_layout;
 
 	info->flags_count = 18;
 	info->flags_layout = arch_x86_flags_layout;
@@ -105,34 +137,10 @@ arch_x86_get_psr(cpu_t *, void *reg)
 static int
 arch_x86_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 {
-	switch (reg_no) {
-	case 0:
-		*value = ((reg_x86_t*)reg)->eax;
-		break;
-	case 1:
-		*value = ((reg_x86_t*)reg)->ecx;
-		break;
-	case 2:
-		*value = ((reg_x86_t*)reg)->edx;
-		break;
-	case 3:
-		*value = ((reg_x86_t*)reg)->ebx;
-		break;
-	case 4:
-		*value = ((reg_x86_t*)reg)->esp;
-		break;
-	case 5:
-		*value = ((reg_x86_t*)reg)->ebp;
-		break;
-	case 6:
-		*value = ((reg_x86_t*)reg)->esi;
-		break;
-	case 7:
-		*value = ((reg_x86_t*)reg)->edi;
-		break;
-	default:
+	if (reg_no > 8)
 		return -1;
-	}
+
+	*value = ((reg_x86_t*)reg)->gpr[reg_no];
 	return 0;
 }
 

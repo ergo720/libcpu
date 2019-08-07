@@ -181,12 +181,9 @@ typedef struct cpu_archinfo {
 	uint32_t max_page_size;
 	uint32_t default_page_size;
 
-	// @@@BEGIN_DEPRECATION
-	uint32_t register_count[4];
-	uint32_t register_size[4];
-	// @@@END_DEPRECATION
-
 	cpu_register_layout_t const *register_layout;
+	uint32_t register_count[4];
+	uint32_t register_offset[4];
 	uint32_t register_count2;
 	cpu_flags_layout_t const *flags_layout;
 	uint32_t flags_count;
