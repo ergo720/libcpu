@@ -43,7 +43,6 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb, uint32_t
 	if (index >= count) {
 		index -= count;
 		regs = cpu->ptr_xr;
-		size = cpu->info.register_layout[index].bits_size;
 		count = cpu->info.register_count[CPU_REG_XR];
 		if (index >= count) {
 			assert(0 && "GPR/XR register index is out of range!");
@@ -94,7 +93,6 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
 	if (index >= count) {
 		index -= count;
 		regs = cpu->ptr_xr;
-		size = cpu->info.register_layout[index].bits_size;
 		count = cpu->info.register_count[CPU_REG_XR];
 		if (index >= count) {
 			assert(0 && "GPR/XR register index is out of range!");
