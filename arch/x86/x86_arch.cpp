@@ -137,7 +137,7 @@ arch_x86_get_psr(cpu_t *, void *reg)
 static int
 arch_x86_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 {
-	if (reg_no > 8)
+	if (reg_no > 7)
 		return -1;
 
 	*value = ((reg_x86_t*)reg)->gpr[reg_no];
