@@ -237,6 +237,7 @@ typedef struct cpu {
 	Value *ptr_grf; // gpr register file
 	Value **ptr_gpr; // GPRs
 	Value **in_ptr_gpr;
+
 	Value **ptr_xr; // XRs
 	Value **in_ptr_xr;
 

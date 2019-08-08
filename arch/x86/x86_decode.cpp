@@ -722,6 +722,7 @@ decode_dst_operand(struct x86_instr *instr)
 	case DST_MEM:
 		if (instr->flags & SIB) {
 			operand->type = OPTYPE_SIB_MEM;
+			// Incorrect? operand->disp = instr->disp;
 		}
 		else {
 			operand->type = OPTYPE_MEM;
@@ -825,7 +826,7 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_MEM:
 		if (instr->flags & SIB) {
 			operand->type = OPTYPE_SIB_MEM;
-			operand->disp = instr->disp;
+			// Incorrect? operand->disp = instr->disp;
 		}
 		else {
 			operand->type = OPTYPE_MEM;
