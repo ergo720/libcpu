@@ -101,13 +101,14 @@ enum {
 // @@@BEGIN_DEPRECATION
 // Four register classes
 enum {
-	CPU_REG_GPR, // General Purpose
-	CPU_REG_FPR, // Floating Point
-	CPU_REG_VR,  // Vector
-	CPU_REG_XR   // Extra Registers, the core expects these to follow
-	 			 // GPRs in the memory layout, they are kept separate
-				 // to avoid confusing the client about the number of
-				 // registers available.
+	CPU_REGCLASS_GPR, // General Purpose
+	CPU_REGCLASS_FPR, // Floating Point
+	CPU_REGCLASS_VR,  // Vector
+	CPU_REGCLASS_XR,  // Extra Registers, the core expects these to follow
+	 				  // GPRs in the memory layout, they are kept separate
+					  // to avoid confusing the client about the number of
+					  // registers available.
+	CPU_REGCLASS_COUNT
 };
 // @@@END_DEPRECATION
 
@@ -182,8 +183,8 @@ typedef struct cpu_archinfo {
 	uint32_t default_page_size;
 
 	cpu_register_layout_t const *register_layout;
-	uint32_t register_count[4];
-	uint32_t register_offset[4];
+	size_t regclass_count[CPU_REGCLASS_COUNT];
+	size_t regclass_offset[CPU_REGCLASS_COUNT];
 	uint32_t register_count2;
 	cpu_flags_layout_t const *flags_layout;
 	uint32_t flags_count;

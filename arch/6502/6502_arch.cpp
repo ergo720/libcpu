@@ -50,9 +50,9 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->address_size = 16;
 	info->psr_size = 8;
 	// There are 4 8-bit GPRs
-	info->register_count[CPU_REG_GPR] = 4;
+	info->regclass_count[CPU_REGCLASS_GPR] = 4;
 	// There is also 1 extra register to handle PSR.
-	info->register_count[CPU_REG_XR] = 1;
+	info->regclass_count[CPU_REGCLASS_XR] = 1;
 	info->register_layout = arch_6502_reg_layout;
 
 	info->flags_count = 8;

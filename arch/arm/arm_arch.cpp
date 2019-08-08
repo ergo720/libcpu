@@ -52,9 +52,9 @@ arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->float_size = 64;
 	info->address_size = 32;
 	// There are 16 32-bit GPRs
-	info->register_count[CPU_REG_GPR] = 16;
+	info->regclass_count[CPU_REGCLASS_GPR] = 16;
 	// There is also 1 extra register to handle PSR.
-	info->register_count[CPU_REG_XR] = 1;
+	info->regclass_count[CPU_REGCLASS_XR] = 1;
 	info->register_layout = arch_arm_reg_layout;
 
 	reg_arm_t *reg;

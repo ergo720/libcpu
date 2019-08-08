@@ -149,25 +149,22 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu->f.init(cpu, &cpu->info, &cpu->rf);
 
 	size_t offset = 0;
-	cpu->info.register_offset[CPU_REG_GPR] = offset;
-	offset += cpu->info.register_count[CPU_REG_GPR];
-	cpu->info.register_offset[CPU_REG_XR] = offset;
-	offset += cpu->info.register_count[CPU_REG_XR];
-	cpu->info.register_offset[CPU_REG_FPR] = offset;
-	offset += cpu->info.register_count[CPU_REG_FPR];
-	cpu->info.register_offset[CPU_REG_VR] = offset;
+	for (unsigned rc = 0; rc < CPU_REGCLASS_COUNT; rc++) {
+		cpu->info.regclass_offset[rc] = offset;
+		offset += cpu->info.regclass_count[rc];
+	}
 
-	assert(is_valid_gpr_size(cpu, offset, cpu->info.register_offset[CPU_REG_GPR]) &&
+	assert(is_valid_gpr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_GPR]) &&
 		"the specified GPR size is not guaranteed to work");
-	assert(is_valid_gpr_size(cpu, offset, cpu->info.register_offset[CPU_REG_XR]) &&
+	assert(is_valid_gpr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_XR]) &&
 		"the specified XR size is not guaranteed to work");
-	assert(is_valid_fpr_size(cpu, offset, cpu->info.register_offset[CPU_REG_FPR]) &&
+	assert(is_valid_fpr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_FPR]) &&
 		"the specified FPR size is not guaranteed to work");
-	assert(is_valid_vr_size(cpu, offset, cpu->info.register_offset[CPU_REG_VR]) &&
+	assert(is_valid_vr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_VR]) &&
 		"the specified VR size is not guaranteed to work");
 
 
-	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
+	uint32_t count = cpu->info.regclass_count[CPU_REGCLASS_GPR];
 	if (count != 0) {
 		cpu->ptr_gpr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_gpr = (Value **)calloc(count, sizeof(Value *));
@@ -176,7 +173,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->in_ptr_gpr = NULL;
 	}
 
-	count = cpu->info.register_count[CPU_REG_XR];
+	count = cpu->info.regclass_count[CPU_REGCLASS_XR];
 	if (count != 0) {
 		cpu->ptr_xr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_xr = (Value **)calloc(count, sizeof(Value *));
@@ -185,7 +182,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->in_ptr_xr = NULL;
 	}
 
-	count = cpu->info.register_count[CPU_REG_FPR];
+	count = cpu->info.regclass_count[CPU_REGCLASS_FPR];
 	if (count != 0) {
 		cpu->ptr_fpr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_fpr = (Value **)calloc(count, sizeof(Value *));

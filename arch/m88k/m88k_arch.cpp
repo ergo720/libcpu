@@ -112,11 +112,11 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->max_page_size = 4096;
 	info->default_page_size = 4096;
 	// There are 32 32-bit GPRs and 32 80-bit FPRs.
-	info->register_count[CPU_REG_GPR] = 32;
-	info->register_count[CPU_REG_FPR] = 32;
+	info->regclass_count[CPU_REGCLASS_GPR] = 32;
+	info->regclass_count[CPU_REGCLASS_FPR] = 32;
 	// There are also 2 extra registers to handle
 	// PSR and TRAPNO.
-	info->register_count[CPU_REG_XR] = 2;
+	info->regclass_count[CPU_REGCLASS_XR] = 2;
 	info->register_layout = arch_m88k_reg_layout;
 
 	// Setup the register files

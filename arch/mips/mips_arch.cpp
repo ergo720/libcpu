@@ -112,9 +112,9 @@ arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->max_page_size = 16777216;
 	info->default_page_size = 4096;
 	// There are 32 32-bit GPRs 
-	info->register_count[CPU_REG_GPR] = 32;
+	info->regclass_count[CPU_REGCLASS_GPR] = 32;
 	// There are 2 extra registers, HI/LO for MUL/DIV insn.
-	info->register_count[CPU_REG_XR] = 2;
+	info->regclass_count[CPU_REGCLASS_XR] = 2;
 	info->register_layout = arch_mips_reg_layout;
 
 	if (info->arch_flags & CPU_MIPS_IS_64BIT) {
