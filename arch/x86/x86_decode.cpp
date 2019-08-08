@@ -968,6 +968,7 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	}
 
 	switch (instr->flags & WIDTH_MASK) {
+	// TODO case WIDTH_QWORD:
 	case WIDTH_DWORD:
 		instr->imm_data[0] = read_u32(RAM, pc);
 		break;
@@ -986,6 +987,7 @@ static void
 decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	switch (instr->flags & WIDTH_MASK) {
+	// TODO case WIDTH_QWORD:
 	case WIDTH_DWORD:
 		instr->rel_data[0] = read_s32(RAM, pc);
 		break;
