@@ -161,9 +161,16 @@ uint32_t RAM32LE(uint8_t *RAM, addr_t a);
 /* condition */
 #define SELECT(c,a,b) (SelectInst::Create(c, a, b, "", bb))
 
+/* direct access to register sets */
+#define GPR(i) cpu->ptr_gpr[i]
+// TODO : Why do 6502 and x86 architectures use GPR() ? Especially since they also use R(), R16() and R8H() who *do* go through arch_get_reg()!
+#define XR(i) cpu->ptr_xr[i] // unused
+#define FPR(i) cpu->ptr_fpr[i] // unused
+
 /* interface to the GPRs */
 #define R(i) arch_get_reg(cpu, i, 0, bb)
 #define R8(i) arch_get_reg(cpu, i, 8, bb)
+#define R8H(i) TRUNC(8, arch_get_reg(cpu, i, 16, bb, 8))
 #define R16(i) arch_get_reg(cpu, i, 16, bb)
 #define R32(i) arch_get_reg(cpu, i, 32, bb)
 

@@ -17,7 +17,6 @@
 #define X 1
 #define Y 2
 #define S 3
-#define GPR(r) cpu->ptr_gpr[r]
 
 /* these are the flags that aren't handled by the generic flag code */
 #define ptr_D cpu->ptr_FLAG[D_SHIFT]

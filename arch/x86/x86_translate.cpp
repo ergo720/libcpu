@@ -25,9 +25,6 @@
 #define EBP 5
 #define ESI 6
 #define EDI 7
-#define GPR(r) cpu->ptr_gpr[r] // TODO : This looks borrowed from 6502_translate.cpp, but all other architectures use just the R() macro's, and R16() is already used here too. So, should we remove GPR and use R? Also note that R8H() *does* go through arch_get_reg too!
-
-#define R8H(i) TRUNC(8, arch_get_reg(cpu, i, 16, bb, 8)) /* AH/CH/DH/BH */
 
 static Value *
 arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsigned opnum)
