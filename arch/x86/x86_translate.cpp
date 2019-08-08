@@ -30,24 +30,14 @@
 #define R8H(i) TRUNC(8, arch_get_reg(cpu, i, 16, bb, 8)) /* AH/CH/DH/BH */
 
 static Value *
-arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op_num)
+arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsigned opnum)
 {
-	struct x86_operand *operand;
-
-	switch (op_num) {
-	case 1:
-		operand = &instr->src;
-		break;
-	case 2:
-		operand = &instr->dst;
-		break;
-	case 3:
-		operand = &instr->third;
-		break;
-	default:
+	if (opnum >= OPNUM_COUNT) {
 		assert(0 && "Invalid operand number specified\n");
 		return NULL;
 	}
+
+	struct x86_operand *operand = &instr->operand[opnum];
 
 	switch (operand->type) {
 	case OP_IMM:

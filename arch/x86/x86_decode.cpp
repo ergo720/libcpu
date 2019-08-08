@@ -643,7 +643,7 @@ static const uint32_t grp9_decode_table[8] = {
 static void
 decode_third_operand(struct x86_instr *instr)
 {
-	struct x86_operand *operand = &instr->third;
+	struct x86_operand *operand = &instr->operand[OPNUM_THIRD];
 
 	switch (instr->flags & OP3_MASK) {
 	case OP3_NONE:
@@ -686,7 +686,7 @@ decode_dst_mem(struct x86_instr *instr)
 static void
 decode_dst_operand(struct x86_instr *instr)
 {
-	struct x86_operand *operand = &instr->dst;
+	struct x86_operand *operand = &instr->operand[OPNUM_DST];
 
 	switch (instr->flags & DST_MASK) {
 	case DST_NONE:
@@ -770,7 +770,7 @@ decode_src_mem(struct x86_instr* instr)
 static void
 decode_src_operand(struct x86_instr *instr)
 {
-	struct x86_operand *operand = &instr->src;
+	struct x86_operand *operand = &instr->operand[OPNUM_SRC];
 
 	switch (instr->flags & SRC_MASK) {
 	case SRC_NONE:

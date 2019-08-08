@@ -354,19 +354,19 @@ arch_x86_disasm_instr_intel(cpu_t *cpu, addr_t pc, char *line, unsigned int max_
 
 	/* Intel syntax operands */
 	if (!(instr.flags & DST_NONE))
-		len += print_operand(pc, operands + len, sizeof(operands) - len, &instr, &instr.dst);
+		len += print_operand(pc, operands + len, sizeof(operands) - len, &instr, &instr.operand[OPNUM_DST]);
 
 	if (!(instr.flags & SRC_NONE) && !(instr.flags & DST_NONE))
 		len += snprintf(operands + len, sizeof(operands) - len, ",");
 
 	if (!(instr.flags & SRC_NONE))
-		len += print_operand(pc, operands + len, sizeof(operands) - len, &instr, &instr.src);
+		len += print_operand(pc, operands + len, sizeof(operands) - len, &instr, &instr.operand[OPNUM_SRC]);
 
 	if (!(instr.flags & SRC_NONE) && !(instr.flags & OP3_NONE))
 		len += snprintf(operands + len, sizeof(operands) - len, ",");
 
 	if (!(instr.flags & OP3_NONE))
-		len += print_operand(pc, operands + len, sizeof(operands) - len, &instr, &instr.third);
+		len += print_operand(pc, operands + len, sizeof(operands) - len, &instr, &instr.operand[OPNUM_THIRD]);
 
 	snprintf(line, max_line, "%s%s%-s %s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], to_mnemonic(&instr), operands);
 

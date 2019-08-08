@@ -193,9 +193,7 @@ struct x86_instr {
 	unsigned char		addr_size_override;
 	unsigned char		op_size_override;
 	unsigned char		is_two_byte_instr;
-	struct x86_operand	src;
-	struct x86_operand	dst;
-	struct x86_operand	third;
+	struct x86_operand	operand[OPNUM_COUNT]
 };
 
 int
