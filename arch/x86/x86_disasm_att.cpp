@@ -307,37 +307,37 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 	int ret = 0;
 
 	switch (operand->type) {
-	case OP_IMM:
+	case OPTYPE_IMM:
 		ret = snprintf(operands, size, "$0x%x", operand->imm);
 		break;
-	case OP_FAR_PTR:
+	case OPTYPE_FAR_PTR:
 		ret = snprintf(operands, size, "$0x%x,$0x%x", operand->seg_sel, operand->imm);
 		break;
-	case OP_REL:
+	case OPTYPE_REL:
 		ret = snprintf(operands, size, "0x%x", (unsigned int)((long)pc + instr->nr_bytes + operand->rel));
 		break;
-	case OP_REG:
+	case OPTYPE_REG:
 		ret = snprintf(operands, size, "%s", to_reg_name(instr, operand->reg));
 		break;
-	case OP_REG8:
+	case OPTYPE_REG8:
 		ret = snprintf(operands, size, "%s", byte_reg_names[operand->reg]);
 		break;
-	case OP_SEG_REG:
+	case OPTYPE_SEG_REG:
 		ret = snprintf(operands, size, "%s", to_seg_reg_name(instr, operand->reg));
 		break;
-	case OP_CR_REG:
+	case OPTYPE_CR_REG:
 		ret = snprintf(operands, size, "%s", to_cr_reg_name(instr, operand->reg));
 		break;
-	case OP_DBG_REG:
+	case OPTYPE_DBG_REG:
 		ret = snprintf(operands, size, "%s", to_dbg_reg_name(instr, operand->reg));
 		break;
-	case OP_MOFFSET:
+	case OPTYPE_MOFFSET:
 		ret = snprintf(operands, size, "%s0x%x", sign_to_str(operand->disp), abs(operand->disp));
 		break;
-	case OP_MEM:
+	case OPTYPE_MEM:
 		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], to_mem_reg_name(instr, operand->reg));
 		break;
-	case OP_MEM_DISP:
+	case OPTYPE_MEM_DISP:
 		ret = snprintf(operands, size, "%s%s0x%x", seg_override_names[instr->seg_override], sign_to_str(operand->disp), abs(operand->disp));
 		switch ((instr->addr_size_override << 16) | (instr->mod << 8) | instr->rm) {
 		case 5:     // 0, 0, 5
@@ -347,10 +347,10 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 			ret += snprintf(operands+ret, size-ret, "(%s)", to_mem_reg_name(instr, operand->reg));
 		}
 		break;
-	case OP_SIB_MEM:
+	case OPTYPE_SIB_MEM:
 		ret = snprintf(operands, size, "(%s,%s,%s)", sib_reg_base_names[instr->base], sib_reg_idx_names[instr->idx], sib_scale_names[instr->scale]);
 		break;
-	case OP_SIB_DISP:
+	case OPTYPE_SIB_DISP:
 		ret = snprintf(operands, size, "%s0x%x(%s,%s,%s)", sign_to_str(operand->disp), abs(operand->disp), to_sib_base_name(instr), sib_reg_idx_names[instr->idx], sib_scale_names[instr->scale]);
 		break;
 	default:

@@ -650,11 +650,11 @@ decode_third_operand(struct x86_instr *instr)
 		break;
 	case OP3_IMM:
 	case OP3_IMM8:
-		operand->type	= OP_IMM;
+		operand->type	= OPTYPE_IMM;
 		operand->imm	= instr->imm_data[0];
 		break;
 	case OP3_CL:
-		operand->type	= OP_REG8;
+		operand->type	= OPTYPE_REG8;
 		operand->reg	= 1; /* CL */
 		break;
 	default:
@@ -692,39 +692,39 @@ decode_dst_operand(struct x86_instr *instr)
 	case DST_NONE:
 		break;
 	case DST_IMM16:
-		operand->type	= OP_IMM;
+		operand->type	= OPTYPE_IMM;
 		operand->imm	= instr->imm_data[1];
 		break;
 	case DST_REG:
-		operand->type	= OP_REG;
+		operand->type	= OPTYPE_REG;
 		operand->reg	= decode_dst_reg(instr);
 		break;
 	case DST_SEG3_REG:
-		operand->type	= OP_SEG_REG;
+		operand->type	= OPTYPE_SEG_REG;
 		operand->reg	= instr->reg_opc;
 		break;
 	case DST_CR_REG:
-		operand->type	= OP_CR_REG;
+		operand->type	= OPTYPE_CR_REG;
 		operand->reg	= instr->reg_opc;
 		break;
 	case DST_DBG_REG:
-		operand->type	= OP_DBG_REG;
+		operand->type	= OPTYPE_DBG_REG;
 		operand->reg	= instr->reg_opc;
 		break;
 	case DST_ACC:
-		operand->type	= OP_REG;
+		operand->type	= OPTYPE_REG;
 		operand->reg	= 0; /* AL/AX/EAX */
 		break;
 	case DST_MOFFSET:
-		operand->type	= OP_MOFFSET;
+		operand->type	= OPTYPE_MOFFSET;
 		operand->disp	= instr->disp;
 		break;
 	case DST_MEM:
 		if (instr->flags & SIB) {
-			operand->type = OP_SIB_MEM;
+			operand->type = OPTYPE_SIB_MEM;
 		}
 		else {
-			operand->type = OP_MEM;
+			operand->type = OPTYPE_MEM;
 			operand->reg = decode_dst_mem(instr);
 		}
 		break;
@@ -732,11 +732,11 @@ decode_dst_operand(struct x86_instr *instr)
 	case DST_MEM_DISP_WORD:
 	case DST_MEM_DISP_FULL:
 		if (instr->flags & SIB) {
-			operand->type = OP_SIB_DISP;
+			operand->type = OPTYPE_SIB_DISP;
 			operand->disp = instr->disp;
 		}
 		else {
-			operand->type = OP_MEM_DISP;
+			operand->type = OPTYPE_MEM_DISP;
 			operand->reg = instr->rm;
 			operand->disp = instr->disp;
 		}
@@ -776,29 +776,29 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_NONE:
 		break;
 	case SRC_REL:
-		operand->type	= OP_REL;
+		operand->type	= OPTYPE_REL;
 		operand->rel	= instr->rel_data[0];
 		break;
 	case SRC_IMM:
 	case SRC_IMM8:
-		operand->type	= OP_IMM;
+		operand->type	= OPTYPE_IMM;
 		operand->imm	= instr->imm_data[0];
 		break;
 	case SRC_IMM48:
-		operand->type	= OP_FAR_PTR;
+		operand->type	= OPTYPE_FAR_PTR;
 		operand->imm	= instr->imm_data[0];
 		operand->seg_sel = instr->imm_data[1];
 		break;
 	case SRC_REG:
-		operand->type	= OP_REG;
+		operand->type	= OPTYPE_REG;
 		operand->reg	= decode_src_reg(instr);
 		break;
 	case SRC_SEG2_REG:
-		operand->type	= OP_SEG_REG;
+		operand->type	= OPTYPE_SEG_REG;
 		operand->reg	= instr->opcode >> 3;
 		break;
 	case SRC_SEG3_REG:
-		operand->type	= OP_SEG_REG;
+		operand->type	= OPTYPE_SEG_REG;
 		if (instr->flags & MOD_RM) {
 			operand->reg = instr->reg_opc;
 		}
@@ -807,28 +807,28 @@ decode_src_operand(struct x86_instr *instr)
 		}
 		break;
 	case SRC_CR_REG:
-		operand->type	= OP_CR_REG;
+		operand->type	= OPTYPE_CR_REG;
 		operand->reg	= instr->reg_opc;
 		break;
 	case SRC_DBG_REG:
-		operand->type	= OP_DBG_REG;
+		operand->type	= OPTYPE_DBG_REG;
 		operand->reg	= instr->reg_opc;
 		break;
 	case SRC_ACC:
-		operand->type	= OP_REG;
+		operand->type	= OPTYPE_REG;
 		operand->reg	= 0; /* AL/AX/EAX */
 		break;
 	case SRC_MOFFSET:
-		operand->type	= OP_MOFFSET;
+		operand->type	= OPTYPE_MOFFSET;
 		operand->disp	= instr->disp;
 		break;
 	case SRC_MEM:
 		if (instr->flags & SIB) {
-			operand->type = OP_SIB_MEM;
+			operand->type = OPTYPE_SIB_MEM;
 			operand->disp = instr->disp;
 		}
 		else {
-			operand->type = OP_MEM;
+			operand->type = OPTYPE_MEM;
 			operand->reg = decode_src_mem(instr);
 		}
 		break;
@@ -836,11 +836,11 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_MEM_DISP_WORD:
 	case SRC_MEM_DISP_FULL:
 		if (instr->flags & SIB) {
-			operand->type = OP_SIB_DISP;
+			operand->type = OPTYPE_SIB_DISP;
 			operand->disp = instr->disp;
 		}
 		else {
-			operand->type = OP_MEM_DISP;
+			operand->type = OPTYPE_MEM_DISP;
 			operand->reg = instr->rm;
 			operand->disp = instr->disp;
 		}
