@@ -730,7 +730,7 @@ decode_dst_operand(struct x86_instr *instr)
 		break;
 	case DST_MEM_DISP_BYTE:
 	case DST_MEM_DISP_WORD:
-	case DST_MEM_DISP_FULL:
+	case DST_MEM_DISP_DWORD:
 		if (instr->flags & SIB) {
 			operand->type = OPTYPE_SIB_DISP;
 			operand->disp = instr->disp;
@@ -834,7 +834,7 @@ decode_src_operand(struct x86_instr *instr)
 		break;
 	case SRC_MEM_DISP_BYTE:
 	case SRC_MEM_DISP_WORD:
-	case SRC_MEM_DISP_FULL:
+	case SRC_MEM_DISP_DWORD:
 		if (instr->flags & SIB) {
 			operand->type = OPTYPE_SIB_DISP;
 			operand->disp = instr->disp;
@@ -1015,8 +1015,8 @@ static void
 decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 {
 	switch (instr->flags & MEM_DISP_MASK) {
-	case SRC_MEM_DISP_FULL:
-	case DST_MEM_DISP_FULL:
+	case SRC_MEM_DISP_DWORD:
+	case DST_MEM_DISP_DWORD:
 		instr->disp = read_s32(RAM, pc);
 		break;
 	case SRC_MEM_DISP_WORD:
@@ -1031,15 +1031,15 @@ decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 }
 
 static const uint64_t sib_dst_decode[] = {
-	/*[0x00]*/	DST_MEM_DISP_FULL,
+	/*[0x00]*/	DST_MEM_DISP_DWORD,
 	/*[0x01]*/	DST_MEM_DISP_BYTE,
-	/*[0x02]*/	DST_MEM_DISP_FULL,
+	/*[0x02]*/	DST_MEM_DISP_DWORD,
 };
 
 static const uint64_t sib_src_decode[] = {
-	/*[0x00]*/	SRC_MEM_DISP_FULL,
+	/*[0x00]*/	SRC_MEM_DISP_DWORD,
 	/*[0x01]*/	SRC_MEM_DISP_BYTE,
-	/*[0x02]*/	SRC_MEM_DISP_FULL,
+	/*[0x02]*/	SRC_MEM_DISP_DWORD,
 };
 
 static void
@@ -1096,7 +1096,7 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 		case 517:   // 0, 2, 5
 		case 518:   // 0, 2, 6
 		case 519:   // 0, 2, 7
-			instr->flags |= DST_MEM_DISP_FULL;
+			instr->flags |= DST_MEM_DISP_DWORD;
 			break;
 		case 66048: // 1, 2, 0
 		case 66049: // 1, 2, 1
@@ -1113,11 +1113,11 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 			instr->flags |= SIB;
 			break;
 		case 516:   // 0, 2, 4
-			instr->flags |= (DST_MEM_DISP_FULL | SIB);
+			instr->flags |= (DST_MEM_DISP_DWORD | SIB);
 			break;
 		case 5:     // 0, 0, 5
 			instr->flags &= ~DST_MEM;
-			instr->flags |= DST_MEM_DISP_FULL;
+			instr->flags |= DST_MEM_DISP_DWORD;
 			break;
 		case 65542: // 1, 0, 6
 			instr->flags &= ~DST_MEM;
@@ -1137,7 +1137,7 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 		case 517:   // 0, 2, 5
 		case 518:   // 0, 2, 6
 		case 519:   // 0, 2, 7
-			instr->flags |= SRC_MEM_DISP_FULL;
+			instr->flags |= SRC_MEM_DISP_DWORD;
 			break;
 		case 66048: // 1, 2, 0
 		case 66049: // 1, 2, 1
@@ -1154,11 +1154,11 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 			instr->flags |= SIB;
 			break;
 		case 516:   // 0, 2, 4
-			instr->flags |= (SRC_MEM_DISP_FULL | SIB);
+			instr->flags |= (SRC_MEM_DISP_DWORD | SIB);
 			break;
 		case 5:     // 0, 0, 5
 			instr->flags &= ~SRC_MEM;
-			instr->flags |= SRC_MEM_DISP_FULL;
+			instr->flags |= SRC_MEM_DISP_DWORD;
 			break;
 		case 65542: // 1, 0, 6
 			instr->flags &= ~SRC_MEM;
