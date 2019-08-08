@@ -160,6 +160,7 @@ enum x86_addmode : uint64_t {
 	ADDMODE_SEG2_REG	= SRC_SEG2_REG|DST_NONE|OP3_NONE,		/* segment register (CS/DS/ES/SS) */
 	ADDMODE_SEG3_REG	= SRC_SEG3_REG|DST_NONE|OP3_NONE,		/* segment register (FS/GS) */
 	ADDMODE_SEG3_REG_RM	= SRC_SEG3_REG|MOD_RM|DIR_REVERSED|OP3_NONE,		/* segment register -> register/memory */
+	ADDMODE_RM_SEG3_REG	= DST_SEG3_REG|MOD_RM|OP3_NONE,		/* register/memory -> segment register */
 	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* register -> register/memory */
 	ADDMODE_REL		= SRC_REL|DST_NONE|OP3_NONE,		/* relative */
 	ADDMODE_RM_REG		= DST_REG|MOD_RM|OP3_NONE,		/* register/memory -> register */
@@ -170,11 +171,18 @@ enum x86_addmode : uint64_t {
 	ADDMODE_REG_CL_RM	= SRC_REG|MOD_RM|DIR_REVERSED|OP3_CL,	/* register, CL -> register/memory */
 	ADDMODE_FAR_PTR		= DST_NONE|SRC_IMM48|OP3_NONE,	/* far pointer */
 	ADDMODE_IMM8_IMM16	= SRC_IMM8|DST_IMM16|OP3_NONE, /* immediate8, immediate16 */
-	ADDMODE_RM_SEG_REG	= DST_SEG3_REG|MOD_RM|OP3_NONE,		/* register/memory -> segment register */
 	ADDMODE_CR_RM		= SRC_CR_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* control register -> register */
 	ADDMODE_DBG_RM		= SRC_DBG_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* debug register -> register */
 	ADDMODE_RM_CR		= DST_CR_REG|MOD_RM|OP3_NONE,		/* register -> control register */
 	ADDMODE_RM_DBG		= DST_DBG_REG|MOD_RM|OP3_NONE,		/* register -> debug register */
+};
+
+// Operand numbers
+enum {
+	OPNUM_SRC = 0,
+	OPNUM_DST,
+	OPNUM_THIRD,
+	OPNUM_COUNT
 };
 
 struct x86_instr {
@@ -201,7 +209,7 @@ struct x86_instr {
 	unsigned char		addr_size_override;
 	unsigned char		op_size_override;
 	unsigned char		is_two_byte_instr;
-	struct x86_operand	operand[OPNUM_COUNT]
+	struct x86_operand	operand[OPNUM_COUNT];
 };
 
 int

@@ -28,6 +28,7 @@ static cpu_register_layout_t arch_x86_register_layout[] = {
 	{ 0, 16, 0, 0, 0, "FS" },
 	{ 0, 16, 0, 0, 0, "GS" },
 	{ 0, 32, 0, 0, 0, "CR0" },
+	{ 0, 32, 0, 0, 0, "CR1" },
 	{ 0, 32, 0, 0, 0, "CR2" },
 	{ 0, 32, 0, 0, 0, "CR3" },
 	{ 0, 32, 0, 0, 0, "CR4" },
@@ -35,6 +36,8 @@ static cpu_register_layout_t arch_x86_register_layout[] = {
 	{ 0, 32, 0, 0, 0, "DR1" },
 	{ 0, 32, 0, 0, 0, "DR2" },
 	{ 0, 32, 0, 0, 0, "DR3" },
+	{ 0, 32, 0, 0, 0, "DR4" },
+	{ 0, 32, 0, 0, 0, "DR5" },
 	{ 0, 32, 0, 0, 0, "DR6" },
 	{ 0, 32, 0, 0, 0, "DR7" },
 	{ 0, 80, 0, 0, 0, "ST0" },
@@ -88,7 +91,7 @@ arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	info->regclass_count[CPU_REGCLASS_GPR] = 8;
 	info->regclass_count[CPU_REGCLASS_FPR] = 8;
-	info->regclass_count[CPU_REGCLASS_XR] = 17;
+	info->regclass_count[CPU_REGCLASS_XR] = 20;
 	info->register_layout = arch_x86_register_layout;
 
 	info->flags_count = 18;

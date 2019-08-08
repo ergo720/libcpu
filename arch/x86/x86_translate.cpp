@@ -25,6 +25,29 @@
 #define EBP 5
 #define ESI 6
 #define EDI 7
+#define ES  0
+#define CS  1
+#define SS  2
+#define DS  3
+#define FS  4
+#define GS  5
+#define CR0 0
+#define CR1 1
+#define CR2 2
+#define CR3 3
+#define CR4 4
+#define DR0 0
+#define DR1 1
+#define DR2 2
+#define DR3 3
+#define DR4 4
+#define DR5 5
+#define DR6 6
+#define DR7 7
+
+#define SEG_REG_BASE 9
+#define CR_REG_BASE  15
+#define DBG_REG_BASE 20
 
 static Value *
 arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsigned opnum)
@@ -262,14 +285,55 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 			return R32(operand->reg);
 		}
 	case OPTYPE_SEG_REG:
-		assert(0 && "OPTYPE_SEG_REG unimplemented!\n");
-		return NULL;
+		switch (operand->reg) {
+		case ES: // fallthrough
+		case CS: // fallthrough
+		case SS: // fallthrough
+		case DS: // fallthrough
+		case FS: // fallthrough
+		case GS:
+			return R16(SEG_REG_BASE + operand->reg);
+		case 6:
+		case 7:
+			assert(0 && "operand->reg specifies a reserved segment register!\n");
+			return NULL;
+		default:
+			assert(0 && "Unknown reg index in OPTYPE_SEG_REG\n");
+			return NULL;
+		}
 	case OPTYPE_CR_REG:
-		assert(0 && "OPTYPE_CR_REG unimplemented!\n");
-		return NULL;
+		switch (operand->reg) {
+		case CR0: // fallthrough
+		case CR2: // fallthrough
+		case CR3: // fallthrough
+		case CR4:
+			return R32(CR_REG_BASE + operand->reg);
+		case CR1:
+		case 6:
+		case 7:
+			assert(0 && "operand->reg specifies a reserved control register!\n");
+			return NULL;
+		default:
+			assert(0 && "Unknown reg index in OPTYPE_CR_REG\n");
+			return NULL;
+		}
 	case OPTYPE_DBG_REG:
-		assert(0 && "OPTYPE_DBG_REG unimplemented!\n");
-		return NULL;
+		switch (operand->reg) {
+		case DR0: // fallthrough
+		case DR1: // fallthrough
+		case DR2: // fallthrough
+		case DR3: // fallthrough
+		case DR6: // fallthrough
+		case DR7:
+			return R32(DBG_REG_BASE + operand->reg);
+		case DR4:
+		case DR5:
+			assert(0 && "operand->reg specifies a reserved debug register!\n");
+			return NULL;
+		default:
+			assert(0 && "Unknown reg index in OPTYPE_DBG_REG\n");
+			return NULL;
+		}
 	case OPTYPE_REL:
 		return CONSTs(32, operand->rel);
 	case OPTYPE_FAR_PTR:

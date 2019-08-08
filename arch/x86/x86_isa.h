@@ -26,14 +26,6 @@
 #define VIP_SHIFT   20
 #define ID_SHIFT    21
 
-// Operand numbers
-enum {
-	OPNUM_SRC = 0,
-	OPNUM_DST,
-	OPNUM_THIRD,
-	OPNUM_COUNT
-};
-
 enum x86_instr_types {
 #define DECLARE_INSTR(name,str) name,
 #include "x86_instr.h"
