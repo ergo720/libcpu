@@ -25,14 +25,7 @@
 #define EBP 5
 #define ESI 6
 #define EDI 7
-#define ptr_EAX cpu->ptr_gpr[EAX]
-#define ptr_ECX cpu->ptr_gpr[ECX]
-#define ptr_EDX cpu->ptr_gpr[EDX]
-#define ptr_EBX cpu->ptr_gpr[EBX]
-#define ptr_ESP cpu->ptr_gpr[ESP]
-#define ptr_EBP cpu->ptr_gpr[EBP]
-#define ptr_ESI cpu->ptr_gpr[ESI]
-#define ptr_EDI cpu->ptr_gpr[EDI]
+#define GPR(r) cpu->ptr_gpr[r]
 
 #define R8H(i) TRUNC(8, arch_get_reg(cpu, i, 16, bb, 8)) /* AH/CH/DH/BH */
 
@@ -97,16 +90,16 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op
 			Value *reg;
 			switch (operand->reg) {
 			case EAX:
-				reg = ptr_EAX;
+				reg = GPR(EAX);
 				break;
 			case ECX:
-				reg = ptr_ECX;
+				reg = GPR(ECX);
 				break;
 			case EDX:
-				reg = ptr_EDX;
+				reg = GPR(EDX);
 				break;
 			case EBX:
-				reg = ptr_EBX;
+				reg = GPR(EBX);
 				break;
 			case ESP:
 				assert(0 && "operand->reg specifies SIB with OP_MEM!\n");
@@ -115,10 +108,10 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op
 				assert(0 && "operand->reg specifies OP_MEM_DISP with OP_MEM!\n");
 				return NULL;
 			case ESI:
-				reg = ptr_ESI;
+				reg = GPR(ESI);
 				break;
 			case EDI:
-				reg = ptr_EDI;
+				reg = GPR(EDI);
 				break;
 			default:
 				assert(0 && "Unknown reg index in OP_MEM\n");
@@ -227,28 +220,28 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op
 			case 1:
 				switch (instr->rm) {
 				case EAX:
-					reg = ADD(ptr_EAX, SEXT(32, CONSTs(8, operand->disp)));
+					reg = ADD(GPR(EAX), SEXT(32, CONSTs(8, operand->disp)));
 					break;
 				case ECX:
-					reg = ADD(ptr_ECX, SEXT(32, CONSTs(8, operand->disp)));
+					reg = ADD(GPR(ECX), SEXT(32, CONSTs(8, operand->disp)));
 					break;
 				case EDX:
-					reg = ADD(ptr_EDX, SEXT(32, CONSTs(8, operand->disp)));
+					reg = ADD(GPR(EDX), SEXT(32, CONSTs(8, operand->disp)));
 					break;
 				case EBX:
-					reg = ADD(ptr_EBX, SEXT(32, CONSTs(8, operand->disp)));
+					reg = ADD(GPR(EBX), SEXT(32, CONSTs(8, operand->disp)));
 					break;
 				case ESP:
 					assert(0 && "instr->rm specifies OP_SIB_DISP with OP_MEM_DISP!\n");
 					return NULL;
 				case EBP:
-					reg = ADD(ptr_EBP, SEXT(32, CONSTs(8, operand->disp)));
+					reg = ADD(GPR(EBP), SEXT(32, CONSTs(8, operand->disp)));
 					break;
 				case ESI:
-					reg = ADD(ptr_ESI, SEXT(32, CONSTs(8, operand->disp)));
+					reg = ADD(GPR(ESI), SEXT(32, CONSTs(8, operand->disp)));
 					break;
 				case EDI:
-					reg = ADD(ptr_EDI, SEXT(32, CONSTs(8, operand->disp)));
+					reg = ADD(GPR(EDI), SEXT(32, CONSTs(8, operand->disp)));
 					break;
 				default:
 					assert(0 && "Unknown rm index in OP_MEM_DISP\n");
@@ -258,28 +251,28 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op
 			case 2:
 				switch (instr->rm) {
 				case EAX:
-					reg = ADD(ptr_EAX, CONSTs(32, operand->disp));
+					reg = ADD(GPR(EAX), CONSTs(32, operand->disp));
 					break;
 				case ECX:
-					reg = ADD(ptr_ECX, CONSTs(32, operand->disp));
+					reg = ADD(GPR(ECX), CONSTs(32, operand->disp));
 					break;
 				case EDX:
-					reg = ADD(ptr_EDX, CONSTs(32, operand->disp));
+					reg = ADD(GPR(EDX), CONSTs(32, operand->disp));
 					break;
 				case EBX:
-					reg = ADD(ptr_EBX, CONSTs(32, operand->disp));
+					reg = ADD(GPR(EBX), CONSTs(32, operand->disp));
 					break;
 				case ESP:
 					assert(0 && "instr->rm specifies OP_SIB_DISP with OP_MEM_DISP!\n");
 					return NULL;
 				case EBP:
-					reg = ADD(ptr_EBP, CONSTs(32, operand->disp));
+					reg = ADD(GPR(EBP), CONSTs(32, operand->disp));
 					break;
 				case ESI:
-					reg = ADD(ptr_ESI, CONSTs(32, operand->disp));
+					reg = ADD(GPR(ESI), CONSTs(32, operand->disp));
 					break;
 				case EDI:
-					reg = ADD(ptr_EDI, CONSTs(32, operand->disp));
+					reg = ADD(GPR(EDI), CONSTs(32, operand->disp));
 					break;
 				default:
 					assert(0 && "Unknown rm index in OP_MEM_DISP\n");
@@ -346,28 +339,28 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op
 		}
 		switch (instr->idx) {
 		case EAX:
-			idx = ptr_EAX;
+			idx = GPR(EAX);
 			break;
 		case ECX:
-			idx = ptr_ECX;
+			idx = GPR(ECX);
 			break;
 		case EDX:
-			idx = ptr_EDX;
+			idx = GPR(EDX);
 			break;
 		case EBX:
-			idx = ptr_EBX;
+			idx = GPR(EBX);
 			break;
 		case ESP:
 			idx = CONSTs(32, 0);
 			break;
 		case EBP:
-			idx = ptr_EBP;
+			idx = GPR(EBP);
 			break;
 		case ESI:
-			idx = ptr_ESI;
+			idx = GPR(ESI);
 			break;
 		case EDI:
-			idx = ptr_EDI;
+			idx = GPR(EDI);
 			break;
 		default:
 			assert(0 && "Unknown sib index specified\n");
@@ -375,28 +368,28 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op
 		}
 		switch (instr->base) {
 		case EAX:
-			base = ptr_EAX;
+			base = GPR(EAX);
 			break;
 		case ECX:
-			base = ptr_ECX;
+			base = GPR(ECX);
 			break;
 		case EDX:
-			base = ptr_EDX;
+			base = GPR(EDX);
 			break;
 		case EBX:
-			base = ptr_EBX;
+			base = GPR(EBX);
 			break;
 		case ESP:
-			base = ptr_ESP;
+			base = GPR(ESP);
 			break;
 		case EBP:
 			switch (instr->mod) {
 			case 0:
 				return ADD(MUL(idx, scale), CONSTs(32, instr->disp));
 			case 1:
-				return ADD(ADD(MUL(idx, scale), SEXT(32, CONSTs(8, operand->disp))), ptr_EBP);
+				return ADD(ADD(MUL(idx, scale), SEXT(32, CONSTs(8, operand->disp))), GPR(EBP));
 			case 2:
-				return ADD(ADD(MUL(idx, scale), CONSTs(32, operand->disp)), ptr_EBP);
+				return ADD(ADD(MUL(idx, scale), CONSTs(32, operand->disp)), GPR(EBP));
 			case 3:
 				assert(0 && "instr->mod specifies OP_REG with sib addressing mode!\n");
 				return NULL;
@@ -405,10 +398,10 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, int op
 				return NULL;
 			}
 		case ESI:
-			base = ptr_ESI;
+			base = GPR(ESI);
 			break;
 		case EDI:
-			base = ptr_EDI;
+			base = GPR(EDI);
 			break;
 		default:
 			assert(0 && "Unknown sib base specified\n");
