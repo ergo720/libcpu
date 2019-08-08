@@ -12,7 +12,7 @@
 #include "frontend.h"
 #include "6502_internal.h"
 
-static cpu_register_layout_t arch_6502_reg_layout[] = {
+static cpu_register_layout_t arch_6502_register_layout[] = {
 	{ 0, 8, 0, 0, 0, "X" },
 	{ 0, 8, 0, 0, 0, "Y" },
 	{ 0, 8, 0, 0, 0, "S" },
@@ -53,7 +53,7 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->regclass_count[CPU_REGCLASS_GPR] = 4;
 	// There is also 1 extra register to handle PSR.
 	info->regclass_count[CPU_REGCLASS_XR] = 1;
-	info->register_layout = arch_6502_reg_layout;
+	info->register_layout = arch_6502_register_layout;
 
 	info->flags_count = 8;
 	info->flags_layout = arch_6502_flags_layout;

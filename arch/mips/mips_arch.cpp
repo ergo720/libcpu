@@ -4,7 +4,7 @@
 #include "frontend.h"
 
 #if CPU_MIPS_IS_64BIT
-static cpu_register_layout_t arch_mips_reg_layout[] = {
+static cpu_register_layout_t arch_mips_register_layout[] = {
 	{ 0, 64, 0, 0, 0, "R0" },
 	{ 0, 64, 0, 0, 0, "R1" },
 	{ 0, 64, 0, 0, 0, "R2" },
@@ -41,7 +41,7 @@ static cpu_register_layout_t arch_mips_reg_layout[] = {
 	{ 0, 64, 0, 0, 0, "LO" },
 };
 #else
-static cpu_register_layout_t arch_mips_reg_layout[] = {
+static cpu_register_layout_t arch_mips_register_layout[] = {
 	{ 0, 32, 0, 0, 0, "R0" },
 	{ 0, 32, 0, 0, 0, "R1" },
 	{ 0, 32, 0, 0, 0, "R2" },
@@ -115,7 +115,7 @@ arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->regclass_count[CPU_REGCLASS_GPR] = 32;
 	// There are 2 extra registers, HI/LO for MUL/DIV insn.
 	info->regclass_count[CPU_REGCLASS_XR] = 2;
-	info->register_layout = arch_mips_reg_layout;
+	info->register_layout = arch_mips_register_layout;
 
 	if (info->arch_flags & CPU_MIPS_IS_64BIT) {
 		reg_mips64_t *reg;

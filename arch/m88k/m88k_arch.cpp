@@ -10,7 +10,7 @@
 #define ptr_TRAPNO	ptr_xr[1]
 #define ptr_C		(cpu->feptr)
 
-static cpu_register_layout_t arch_m88k_reg_layout[] = {
+static cpu_register_layout_t arch_m88k_register_layout[] = {
 	{ 0, 32, 0, 0, 0, "R0" },
 	{ 0, 32, 0, 0, 0, "R1" },
 	{ 0, 32, 0, 0, 0, "R2" },
@@ -117,7 +117,7 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	// There are also 2 extra registers to handle
 	// PSR and TRAPNO.
 	info->regclass_count[CPU_REGCLASS_XR] = 2;
-	info->register_layout = arch_m88k_reg_layout;
+	info->register_layout = arch_m88k_register_layout;
 
 	// Setup the register files
 	reg = (m88k_grf_t *)malloc(sizeof(m88k_grf_t));

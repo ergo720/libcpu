@@ -3,7 +3,7 @@
 #include "fapra_interface.h"
 #include "frontend.h"
 
-static cpu_register_layout_t arch_fapra_reg_layout[] = {
+static cpu_register_layout_t arch_fapra_register_layout[] = {
 	{ 0, 32, 0, 0, 0, "R0" },
 	{ 0, 32, 0, 0, 0, "R1" },
 	{ 0, 32, 0, 0, 0, "R2" },
@@ -59,7 +59,7 @@ arch_fapra_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->default_page_size = 4096;
 	// There are 32 32-bit GPRs 
 	info->regclass_count[CPU_REGCLASS_GPR] = 32;
-	info->register_layout = arch_fapra_reg_layout;
+	info->register_layout = arch_fapra_register_layout;
 
 	reg_fapra32_t *reg;
 	reg = (reg_fapra32_t *) malloc(sizeof(reg_fapra32_t));
