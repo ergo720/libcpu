@@ -31,14 +31,14 @@ get_struct_reg(cpu_t *cpu, const char* name) {
 	// GPRs
 	count = cpu->info.register_count[CPU_REG_GPR];
 	offset = cpu->info.register_offset[CPU_REG_GPR];
-	for (uint32_t n = 0; n < count; n++, offset++)
-		type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.register_layout[offset].bits_size));
+	for (uint32_t n = 0; n < count; n++)
+		type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.register_layout[offset + n].bits_size));
 
 	// XRs
 	count = cpu->info.register_count[CPU_REG_XR];
 	offset = cpu->info.register_offset[CPU_REG_XR];
-	for (uint32_t n = 0; n < count; n++, offset++)
-		type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.register_layout[offset].bits_size));
+	for (uint32_t n = 0; n < count; n++)
+		type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.register_layout[offset + n].bits_size));
 
 //	type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.address_size)); /* PC */
 
