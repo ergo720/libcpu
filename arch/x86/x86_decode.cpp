@@ -11,18 +11,20 @@
 /*
  * First byte of an element in 'decode_table_one' is the instruction type.
  */
-#define X86_INSTR_OPC_MASK	0xFF
+#define X86_INSTR_OPC_MASK	0xFF // Note : When opcode count surpasses 8 bits, update this mask AND x86_instr_flags!
 
-// TODO : Change these into X86_INSTR_FLAG_'s :
-#define X86_OPC_UNDEFINED		0	// non-existent instr
-#define X86_OPC_DIFF_SYNTAX	    0	// instr has different syntax between intel and att
+/* Readability markers. Only X86_OPC_DIFF_SYNTAX is checked during decoding! */
+#define X86_OPC_PREFIX      0 // prefix bytes, fetched in arch_x86_decode_instr()
+#define X86_OPC_UNDEFINED   X86_OPC_ILLEGAL	// non-existent instruction - NO flags allowed!
+#define X86_OPC_DIFF_SYNTAX 0 // instr has different syntax between intel and att
 
-#define X86_INSTR_FLAG_SIZE_OVERRIDE_SHIFT 8
-#define X86_INSTR_FLAG_USE_INTEL_SHIFT     16
+/* Flags steering decoding differences between Intel and AT&T syntaxes - DO NOT mix these with x86_instr_flags! */
+#define DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT 8
+#define DIFF_SYNTAX_USE_INTEL_SHIFT     16
+#define DIFF_SYNTAX_SIZE_OVERRIDE (1 << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT)
+#define DIFF_SYNTAX_USE_INTEL     (1 << DIFF_SYNTAX_USE_INTEL_SHIFT)
 
-#define X86_INSTR_FLAG_SIZE_OVERRIDE (1 << X86_INSTR_FLAG_SIZE_OVERRIDE_SHIFT)
-#define X86_INSTR_FLAG_USE_INTEL     (1 << X86_INSTR_FLAG_USE_INTEL_SHIFT)
-
+/* Shorthand for common conditional instruction flags */
 #define Jb (ADDMODE_REL | WIDTH_BYTE)
 #define Jv (ADDMODE_REL | WIDTH_DWORD)
 #define Cv (ADDMODE_RM_REG | WIDTH_DWORD)
@@ -44,7 +46,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x0C]*/	X86_OPC_OR | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x0D]*/	X86_OPC_OR | ADDMODE_IMM_ACC | WIDTH_DWORD,
 	/*[0x0E]*/	X86_OPC_PUSH | ADDMODE_SEG2_REG /* CS */ | WIDTH_DWORD,
-	/*[0x0F]*/	0 /* TWO BYTE OPCODE */,
+	/*[0x0F]*/	X86_OPC_PREFIX /* TWO BYTE OPCODE */,
 	/*[0x10]*/	X86_OPC_ADC | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x11]*/	X86_OPC_ADC | ADDMODE_REG_RM | WIDTH_DWORD,
 	/*[0x12]*/	X86_OPC_ADC | ADDMODE_RM_REG | WIDTH_BYTE,
@@ -67,7 +69,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x23]*/	X86_OPC_AND | ADDMODE_RM_REG | WIDTH_DWORD,
 	/*[0x24]*/	X86_OPC_AND | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x25]*/	X86_OPC_AND | ADDMODE_IMM_ACC | WIDTH_DWORD,
-	/*[0x26]*/	0 /* ES_OVERRIDE */,
+	/*[0x26]*/	X86_OPC_PREFIX /* ES_OVERRIDE */,
 	/*[0x27]*/	X86_OPC_DAA | ADDMODE_IMPLIED,
 	/*[0x28]*/	X86_OPC_SUB | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x29]*/	X86_OPC_SUB | ADDMODE_REG_RM | WIDTH_DWORD,
@@ -75,7 +77,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x2B]*/	X86_OPC_SUB | ADDMODE_RM_REG | WIDTH_DWORD,
 	/*[0x2C]*/	X86_OPC_SUB | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x2D]*/	X86_OPC_SUB | ADDMODE_IMM_ACC | WIDTH_DWORD,
-	/*[0x2E]*/	0 /* CS_OVERRIDE */,
+	/*[0x2E]*/	X86_OPC_PREFIX /* CS_OVERRIDE */,
 	/*[0x2F]*/	X86_OPC_DAS | ADDMODE_IMPLIED,
 	/*[0x30]*/	X86_OPC_XOR | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x31]*/	X86_OPC_XOR | ADDMODE_REG_RM | WIDTH_DWORD,
@@ -83,7 +85,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x33]*/	X86_OPC_XOR | ADDMODE_RM_REG | WIDTH_DWORD,
 	/*[0x34]*/	X86_OPC_XOR | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x35]*/	X86_OPC_XOR | ADDMODE_IMM_ACC | WIDTH_DWORD,
-	/*[0x36]*/	0 /* SS_OVERRIDE */,
+	/*[0x36]*/	X86_OPC_PREFIX /* SS_OVERRIDE */,
 	/*[0x37]*/	X86_OPC_AAA | ADDMODE_IMPLIED,
 	/*[0x38]*/	X86_OPC_CMP | ADDMODE_REG_RM | WIDTH_BYTE,
 	/*[0x39]*/	X86_OPC_CMP | ADDMODE_REG_RM | WIDTH_DWORD,
@@ -91,7 +93,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x3B]*/	X86_OPC_CMP | ADDMODE_RM_REG | WIDTH_DWORD,
 	/*[0x3C]*/	X86_OPC_CMP | ADDMODE_IMM_ACC | WIDTH_BYTE,
 	/*[0x3D]*/	X86_OPC_CMP | ADDMODE_IMM_ACC | WIDTH_DWORD,
-	/*[0x3E]*/	0 /* DS_OVERRIDE */,
+	/*[0x3E]*/	X86_OPC_PREFIX /* DS_OVERRIDE */,
 	/*[0x3F]*/	X86_OPC_AAS | ADDMODE_IMPLIED,
 	/*[0x40]*/	X86_OPC_INC | ADDMODE_REG | WIDTH_DWORD,
 	/*[0x41]*/	X86_OPC_INC | ADDMODE_REG | WIDTH_DWORD,
@@ -129,10 +131,10 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x61]*/	X86_OPC_POPA | ADDMODE_IMPLIED | WIDTH_DWORD,
 	/*[0x62]*/	X86_OPC_DIFF_SYNTAX | ADDMODE_RM_REG,
 	/*[0x63]*/	X86_OPC_ARPL | ADDMODE_REG_RM | WIDTH_WORD,
-	/*[0x64]*/	0 /* FS_OVERRIDE */,
-	/*[0x65]*/	0 /* GS_OVERRIDE */,
-	/*[0x66]*/	0 /* OPERAND_SIZE_OVERRIDE */,
-	/*[0x67]*/	0 /* ADDRESS_SIZE_OVERRIDE */,
+	/*[0x64]*/	X86_OPC_PREFIX /* FS_OVERRIDE */,
+	/*[0x65]*/	X86_OPC_PREFIX /* GS_OVERRIDE */,
+	/*[0x66]*/	X86_OPC_PREFIX /* OPERAND_SIZE_OVERRIDE */,
+	/*[0x67]*/	X86_OPC_PREFIX /* ADDRESS_SIZE_OVERRIDE */,
 	/*[0x68]*/	X86_OPC_PUSH | ADDMODE_IMM | WIDTH_DWORD,
 	/*[0x69]*/	X86_OPC_IMUL | ADDMODE_RM_IMM_REG | WIDTH_DWORD,
 	/*[0x6A]*/	X86_OPC_PUSH | ADDMODE_IMM | WIDTH_BYTE,
@@ -269,10 +271,10 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xED]*/	X86_OPC_IN | ADDMODE_IMPLIED | WIDTH_DWORD,
 	/*[0xEE]*/	X86_OPC_OUT | ADDMODE_IMPLIED | WIDTH_BYTE,
 	/*[0xEF]*/	X86_OPC_OUT | ADDMODE_IMPLIED | WIDTH_DWORD,
-	/*[0xF0]*/	0 /* LOCK */,
+	/*[0xF0]*/	X86_OPC_PREFIX /* LOCK */,
 	/*[0xF1]*/	X86_OPC_UNDEFINED, // INT1 undocumented instr, should add this?
-	/*[0xF2]*/	0 /* REPNZ_PREFIX */,
-	/*[0xF3]*/	0 /* REPZ_PREFIX */,
+	/*[0xF2]*/	X86_OPC_PREFIX /* REPNZ_PREFIX */,
+	/*[0xF3]*/	X86_OPC_PREFIX /* REPZ_PREFIX */,
 	/*[0xF4]*/	X86_OPC_HLT | ADDMODE_IMPLIED,
 	/*[0xF5]*/	X86_OPC_CMC | ADDMODE_IMPLIED,
 	/*[0xF6]*/	GROUP_3 | ADDMODE_RM | WIDTH_BYTE,
@@ -564,13 +566,13 @@ static const uint32_t grp2_decode_table[8] = {
 	/*[0x03]*/	X86_OPC_RCR,
 	/*[0x04]*/	X86_OPC_SHL,
 	/*[0x05]*/	X86_OPC_SHR,
-	/*[0x06]*/	0,
+	/*[0x06]*/	X86_OPC_UNDEFINED,
 	/*[0x07]*/	X86_OPC_SAR,
 };
 
 static const uint32_t grp3_decode_table[8] = {
 	/*[0x00]*/	X86_OPC_TEST,
-	/*[0x01]*/	0,
+	/*[0x01]*/	X86_OPC_UNDEFINED,
 	/*[0x02]*/	X86_OPC_NOT,
 	/*[0x03]*/	X86_OPC_NEG,
 	/*[0x04]*/	X86_OPC_MUL,
@@ -582,12 +584,12 @@ static const uint32_t grp3_decode_table[8] = {
 static const uint32_t grp4_decode_table[8] = {
 	/*[0x00]*/	X86_OPC_INC,
 	/*[0x01]*/	X86_OPC_DEC,
-	/*[0x02]*/	0,
-	/*[0x03]*/	0,
-	/*[0x04]*/	0,
-	/*[0x05]*/	0,
-	/*[0x06]*/	0,
-	/*[0x07]*/	0,
+	/*[0x02]*/	X86_OPC_UNDEFINED,
+	/*[0x03]*/	X86_OPC_UNDEFINED,
+	/*[0x04]*/	X86_OPC_UNDEFINED,
+	/*[0x05]*/	X86_OPC_UNDEFINED,
+	/*[0x06]*/	X86_OPC_UNDEFINED,
+	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
 static const uint32_t grp5_decode_table[8] = {
@@ -598,7 +600,7 @@ static const uint32_t grp5_decode_table[8] = {
 	/*[0x04]*/	X86_OPC_JMP,
 	/*[0x05]*/	X86_OPC_DIFF_SYNTAX,
 	/*[0x06]*/	X86_OPC_PUSH,
-	/*[0x07]*/	0,
+	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
 static const uint32_t grp6_decode_table[8] = {
@@ -608,8 +610,8 @@ static const uint32_t grp6_decode_table[8] = {
 	/*[0x03]*/	X86_OPC_LTR,
 	/*[0x04]*/	X86_OPC_VERR,
 	/*[0x05]*/	X86_OPC_VERW,
-	/*[0x06]*/	0,
-	/*[0x07]*/	0,
+	/*[0x06]*/	X86_OPC_UNDEFINED,
+	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
 static const uint32_t grp7_decode_table[8] = {
@@ -618,16 +620,16 @@ static const uint32_t grp7_decode_table[8] = {
 	/*[0x02]*/	X86_OPC_DIFF_SYNTAX,
 	/*[0x03]*/	X86_OPC_DIFF_SYNTAX,
 	/*[0x04]*/	X86_OPC_SMSW,
-	/*[0x05]*/	0,
+	/*[0x05]*/	X86_OPC_UNDEFINED,
 	/*[0x06]*/	X86_OPC_LMSW,
 	/*[0x07]*/	X86_OPC_INVLPG,
 };
 
 static const uint32_t grp8_decode_table[8] = {
-	/*[0x00]*/	0,
-	/*[0x01]*/	0,
-	/*[0x02]*/	0,
-	/*[0x03]*/	0,
+	/*[0x00]*/	X86_OPC_UNDEFINED,
+	/*[0x01]*/	X86_OPC_UNDEFINED,
+	/*[0x02]*/	X86_OPC_UNDEFINED,
+	/*[0x03]*/	X86_OPC_UNDEFINED,
 	/*[0x04]*/	X86_OPC_BT,
 	/*[0x05]*/	X86_OPC_BTS,
 	/*[0x06]*/	X86_OPC_BTR,
@@ -635,14 +637,14 @@ static const uint32_t grp8_decode_table[8] = {
 };
 
 static const uint32_t grp9_decode_table[8] = {
-	/*[0x00]*/	0,
+	/*[0x00]*/	X86_OPC_UNDEFINED,
 	/*[0x01]*/	X86_OPC_CMPXCHG8B,
-	/*[0x02]*/	0,
-	/*[0x03]*/	0,
-	/*[0x04]*/	0,
-	/*[0x05]*/	0,
-	/*[0x06]*/	0,
-	/*[0x07]*/	0,
+	/*[0x02]*/	X86_OPC_UNDEFINED,
+	/*[0x03]*/	X86_OPC_UNDEFINED,
+	/*[0x04]*/	X86_OPC_UNDEFINED,
+	/*[0x05]*/	X86_OPC_UNDEFINED,
+	/*[0x06]*/	X86_OPC_UNDEFINED,
+	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
 static void
@@ -1187,7 +1189,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 
 	start_pc = pc;
 
-	/* Prefixes */
+	/* Prefixes (X86_OPC_PREFIX) */
 	instr->seg_override	= NO_OVERRIDE;
 	instr->rep_prefix	= NO_PREFIX;
 	instr->addr_size_override = 0;
@@ -1246,7 +1248,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 done_prefixes:
 
 	/* Opcode byte */
-	if (opcode == 0x0F) { /* TWO BYTE OPCODE */
+	if (opcode == 0x0F) { /* X86_OPC_PREFIX /* /* TWO BYTE OPCODE */
 		opcode = RAM[pc++];
 		decode = decode_table_two[opcode];
 		instr->is_two_byte_instr = 1;
@@ -1259,106 +1261,108 @@ done_prefixes:
 	instr->type	= decode & X86_INSTR_OPC_MASK;
 	instr->flags	= decode & ~X86_INSTR_OPC_MASK;
 
-	if (instr->type != X86_OPC_DIFF_SYNTAX) {
-		if (instr->flags == 0) /* Unrecognized? */
-			return -1;
-	} else {
-		switch ((use_intel << X86_INSTR_FLAG_USE_INTEL_SHIFT) | (instr->op_size_override << X86_INSTR_FLAG_SIZE_OVERRIDE_SHIFT) | instr->opcode) {
+	if (instr->flags == 0) /* Unrecognized? */
+		return -1;
+
+	if (instr->type == X86_OPC_DIFF_SYNTAX) {
+		switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (instr->op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->opcode) {
+		// X86_OPC_DIFF_SYNTAX markers in decode_table_one :
 		case 0x62:
 			instr->type = X86_OPC_BOUND;
 			instr->flags |= WIDTH_DWORD;
 			break;
-		case 0x62 | X86_INSTR_FLAG_SIZE_OVERRIDE:
+		case 0x62 | DIFF_SYNTAX_SIZE_OVERRIDE:
 			instr->type = X86_OPC_BOUND;
 			instr->flags |= WIDTH_WORD;
 			break;
-		case 0x62 | X86_INSTR_FLAG_USE_INTEL:
+		case 0x62 | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_BOUND;
 			instr->flags |= WIDTH_QWORD;
 			break;
-		case 0x62 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+		case 0x62 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_BOUND;
 			instr->flags |= WIDTH_DWORD;
 			break;
 		case 0x98:
 			instr->type = X86_OPC_CWTL;
 			break;
-		case 0x98 | X86_INSTR_FLAG_SIZE_OVERRIDE:
+		case 0x98 | DIFF_SYNTAX_SIZE_OVERRIDE:
 			instr->type = X86_OPC_CBTV;
 			break;
-		case 0x98 | X86_INSTR_FLAG_USE_INTEL:
+		case 0x98 | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_CWDE;
 			break;
-		case 0x98 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+		case 0x98 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_CBW;
 			break;
 		case 0x99:
 			instr->type = X86_OPC_CLTD;
 			break;
-		case 0x99 | X86_INSTR_FLAG_SIZE_OVERRIDE:
+		case 0x99 | DIFF_SYNTAX_SIZE_OVERRIDE:
 			instr->type = X86_OPC_CWTD;
 			break;
-		case 0x99 | X86_INSTR_FLAG_USE_INTEL:
+		case 0x99 | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_CDQ;
 			break;
-		case 0x99 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+		case 0x99 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_CWD;
 			break;
 		case 0x9A:
-		case 0x9A | X86_INSTR_FLAG_SIZE_OVERRIDE:
+		case 0x9A | DIFF_SYNTAX_SIZE_OVERRIDE:
 			instr->type = X86_OPC_LCALL;
 			break;
-		case 0x9A | X86_INSTR_FLAG_USE_INTEL:
-		case 0x9A | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+		case 0x9A | DIFF_SYNTAX_USE_INTEL:
+		case 0x9A | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_CALL;
 			break;
-		case 0xB6:
-		case 0xB6 | X86_INSTR_FLAG_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVZXB;
-			break;
-		case 0xB6 | X86_INSTR_FLAG_USE_INTEL:
-		case 0xB6 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
-		case 0xB7 | X86_INSTR_FLAG_USE_INTEL:
-		case 0xB7 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
-			instr->type = X86_OPC_MOVZX;
-			break;
-		case 0xB7:
-		case 0xB7 | X86_INSTR_FLAG_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVZXW;
-			break;
-		case 0xBE:
-		case 0xBE | X86_INSTR_FLAG_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVSXB;
-			break;
-		case 0xBE | X86_INSTR_FLAG_USE_INTEL:
-		case 0xBE | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
-		case 0xBF | X86_INSTR_FLAG_USE_INTEL:
-		case 0xBF | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
-			instr->type = X86_OPC_MOVSX;
-			break;
-		case 0xBF:
-		case 0xBF | X86_INSTR_FLAG_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVSXW;
-			break;
 		case 0xCA:
-		case 0xCA | X86_INSTR_FLAG_SIZE_OVERRIDE:
+		case 0xCA | DIFF_SYNTAX_SIZE_OVERRIDE:
 		case 0xCB:
-		case 0xCB | X86_INSTR_FLAG_SIZE_OVERRIDE:
+		case 0xCB | DIFF_SYNTAX_SIZE_OVERRIDE:
 			instr->type = X86_OPC_LRET;
 			break;
-		case 0xCA | X86_INSTR_FLAG_USE_INTEL:
-		case 0xCA | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
-		case 0xCB | X86_INSTR_FLAG_USE_INTEL:
-		case 0xCB | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+		case 0xCA | DIFF_SYNTAX_USE_INTEL:
+		case 0xCA | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
+		case 0xCB | DIFF_SYNTAX_USE_INTEL:
+		case 0xCB | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_RETF;
 			break;
 		case 0xEA:
-		case 0xEA | X86_INSTR_FLAG_SIZE_OVERRIDE:
+		case 0xEA | DIFF_SYNTAX_SIZE_OVERRIDE:
 			instr->type = X86_OPC_LJMP;
 			break;
-		case 0xEA | X86_INSTR_FLAG_USE_INTEL:
-		case 0xEA | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+		case 0xEA | DIFF_SYNTAX_USE_INTEL:
+		case 0xEA | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_JMP;
+			break;
+		// X86_OPC_DIFF_SYNTAX markers in decode_table_two :
+		case 0xB6:
+		case 0xB6 | DIFF_SYNTAX_SIZE_OVERRIDE:
+			instr->type = X86_OPC_MOVZXB;
+			break;
+		case 0xB6 | DIFF_SYNTAX_USE_INTEL:
+		case 0xB6 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
+		case 0xB7 | DIFF_SYNTAX_USE_INTEL:
+		case 0xB7 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
+			instr->type = X86_OPC_MOVZX;
+			break;
+		case 0xB7:
+		case 0xB7 | DIFF_SYNTAX_SIZE_OVERRIDE:
+			instr->type = X86_OPC_MOVZXW;
+			break;
+		case 0xBE:
+		case 0xBE | DIFF_SYNTAX_SIZE_OVERRIDE:
+			instr->type = X86_OPC_MOVSXB;
+			break;
+		case 0xBE | DIFF_SYNTAX_USE_INTEL:
+		case 0xBE | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
+		case 0xBF | DIFF_SYNTAX_USE_INTEL:
+		case 0xBF | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
+			instr->type = X86_OPC_MOVSX;
+			break;
+		case 0xBF:
+		case 0xBF | DIFF_SYNTAX_SIZE_OVERRIDE:
+			instr->type = X86_OPC_MOVSXW;
 			break;
 		default:
 			decode_modrm_fields(instr, RAM[pc++]);
@@ -1383,17 +1387,18 @@ done_prefixes:
 			case GROUP_5:
 				instr->type = grp5_decode_table[instr->reg_opc];
 				if (instr->type == X86_OPC_DIFF_SYNTAX) {
-					switch ((use_intel << X86_INSTR_FLAG_USE_INTEL_SHIFT) | instr->reg_opc) {
+					switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | instr->reg_opc) {
+					// X86_OPC_DIFF_SYNTAX markers in grp5_decode_table :
 					case 0x3:
 						instr->type = X86_OPC_LCALL;
 						break;
-					case 0x3 | X86_INSTR_FLAG_USE_INTEL:
+					case 0x3 | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_CALL;
 						break;
 					case 0x5:
 						instr->type = X86_OPC_LJMP;
 						break;
-					case 0x5 | X86_INSTR_FLAG_USE_INTEL:
+					case 0x5 | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_JMP;
 						break;
 					default:
@@ -1408,53 +1413,54 @@ done_prefixes:
 				instr->type = grp7_decode_table[instr->reg_opc];
 				switch (instr->type) {
 				case X86_OPC_DIFF_SYNTAX:
-					switch ((use_intel << X86_INSTR_FLAG_USE_INTEL_SHIFT) | (instr->op_size_override << X86_INSTR_FLAG_SIZE_OVERRIDE_SHIFT) | instr->reg_opc) {
+					switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (instr->op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->reg_opc) {
+					// X86_OPC_DIFF_SYNTAX markers in grp7_decode_table :
 					case 0x0:
 						instr->type = X86_OPC_SGDTL;
 						break;
-					case 0x0 | X86_INSTR_FLAG_SIZE_OVERRIDE:
+					case 0x0 | DIFF_SYNTAX_SIZE_OVERRIDE:
 						instr->type = X86_OPC_SGDTW;
 						break;
-					case 0x0 | X86_INSTR_FLAG_USE_INTEL:
+					case 0x0 | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_SGDTD;
 						break;
-					case 0x0 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+					case 0x0 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_SGDTW;
 						break;
 					case 0x1:
 						instr->type = X86_OPC_SIDTL;
 						break;
-					case 0x1 | X86_INSTR_FLAG_SIZE_OVERRIDE:
+					case 0x1 | DIFF_SYNTAX_SIZE_OVERRIDE:
 						instr->type = X86_OPC_SIDTW;
 						break;
-					case 0x1 | X86_INSTR_FLAG_USE_INTEL:
+					case 0x1 | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_SIDTD;
 						break;
-					case 0x1 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+					case 0x1 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_SIDTW;
 						break;
 					case 0x2:
 						instr->type = X86_OPC_LGDTL;
 						break;
-					case 0x2 | X86_INSTR_FLAG_SIZE_OVERRIDE:
+					case 0x2 | DIFF_SYNTAX_SIZE_OVERRIDE:
 						instr->type = X86_OPC_LGDTW;
 						break;
-					case 0x2 | X86_INSTR_FLAG_USE_INTEL:
+					case 0x2 | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_LGDTD;
 						break;
-					case 0x2 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+					case 0x2 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_LGDTW;
 						break;
 					case 0x3:
 						instr->type = X86_OPC_LIDTL;
 						break;
-					case 0x3 | X86_INSTR_FLAG_SIZE_OVERRIDE:
+					case 0x3 | DIFF_SYNTAX_SIZE_OVERRIDE:
 						instr->type = X86_OPC_LIDTW;
 						break;
-					case 0x3 | X86_INSTR_FLAG_USE_INTEL:
+					case 0x3 | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_LIDTD;
 						break;
-					case 0x3 | X86_INSTR_FLAG_SIZE_OVERRIDE | X86_INSTR_FLAG_USE_INTEL:
+					case 0x3 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 						instr->type = X86_OPC_LIDTW;
 						break;
 					default:
