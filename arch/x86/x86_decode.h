@@ -145,36 +145,36 @@ enum x86_instr_flags : uint64_t {
 /*
  *	Addressing modes.
  */
-enum x86_addmode : uint64_t {
-	ADDMODE_ACC_MOFFSET	= SRC_ACC|DST_MOFFSET|OP3_NONE,		/* AL/AX/EAX -> moffset */
-	ADDMODE_ACC_REG		= SRC_ACC|DST_REG|OP3_NONE,		/* AL/AX/EAX -> reg */
-	ADDMODE_IMM		= SRC_IMM|DST_NONE|OP3_NONE,		/* immediate operand */
-	ADDMODE_IMM8		= SRC_IMM8|DST_NONE|OP3_NONE,		/* immediate8 operand */
-	ADDMODE_IMM8_RM		= SRC_IMM8|MOD_RM|DIR_REVERSED|OP3_NONE,	/* immediate8 -> register/memory */
-	ADDMODE_IMM_RM		= SRC_IMM|MOD_RM|DIR_REVERSED|OP3_NONE,	/* immediate -> register/memory */
-	ADDMODE_IMM_ACC		= SRC_IMM|DST_ACC|OP3_NONE,		/* immediate -> AL/AX/EAX */
-	ADDMODE_IMM_REG		= SRC_IMM|DST_REG|OP3_NONE,		/* immediate -> register */
-	ADDMODE_IMPLIED		= SRC_NONE|DST_NONE|OP3_NONE,		/* no operands */
-	ADDMODE_MOFFSET_ACC	= SRC_MOFFSET|DST_ACC|OP3_NONE,		/* moffset -> AL/AX/EAX */
-	ADDMODE_REG		= SRC_REG|DST_NONE|OP3_NONE,		/* register */
-	ADDMODE_SEG2_REG	= SRC_SEG2_REG|DST_NONE|OP3_NONE,		/* segment register (CS/DS/ES/SS) */
-	ADDMODE_SEG3_REG	= SRC_SEG3_REG|DST_NONE|OP3_NONE,		/* segment register (FS/GS) */
-	ADDMODE_SEG3_REG_RM	= SRC_SEG3_REG|MOD_RM|DIR_REVERSED|OP3_NONE,		/* segment register -> register/memory */
-	ADDMODE_RM_SEG3_REG	= DST_SEG3_REG|MOD_RM|OP3_NONE,		/* register/memory -> segment register */
-	ADDMODE_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* register -> register/memory */
-	ADDMODE_REL		= SRC_REL|DST_NONE|OP3_NONE,		/* relative */
-	ADDMODE_RM_REG		= DST_REG|MOD_RM|OP3_NONE,		/* register/memory -> register */
-	ADDMODE_RM		= DST_NONE|MOD_RM|OP3_NONE,	/* register/memory */
-	ADDMODE_RM_IMM_REG	= DST_REG|MOD_RM|OP3_IMM,	/* register/memory, immediate -> register */
-	ADDMODE_RM_IMM8_REG	= DST_REG|MOD_RM|OP3_IMM8,	/* register/memory, immediate8 -> register */
-	ADDMODE_REG_IMM8_RM	= SRC_REG|MOD_RM|DIR_REVERSED|OP3_IMM8,	/* register, immediate8 -> register/memory */
-	ADDMODE_REG_CL_RM	= SRC_REG|MOD_RM|DIR_REVERSED|OP3_CL,	/* register, CL -> register/memory */
-	ADDMODE_FAR_PTR		= DST_NONE|SRC_IMM48|OP3_NONE,	/* far pointer */
-	ADDMODE_IMM8_IMM16	= SRC_IMM8|DST_IMM16|OP3_NONE, /* immediate8, immediate16 */
-	ADDMODE_CR_RM		= SRC_CR_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* control register -> register */
-	ADDMODE_DBG_RM		= SRC_DBG_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* debug register -> register */
-	ADDMODE_RM_CR		= DST_CR_REG|MOD_RM|OP3_NONE,		/* register -> control register */
-	ADDMODE_RM_DBG		= DST_DBG_REG|MOD_RM|OP3_NONE,		/* register -> debug register */
+enum x86_addrmod : uint64_t {
+	ADDRMOD_ACC_MOFFSET	= SRC_ACC|DST_MOFFSET|OP3_NONE,		/* AL/AX/EAX -> moffset */
+	ADDRMOD_ACC_REG		= SRC_ACC|DST_REG|OP3_NONE,		/* AL/AX/EAX -> reg */
+	ADDRMOD_IMM		= SRC_IMM|DST_NONE|OP3_NONE,		/* immediate operand */
+	ADDRMOD_IMM8		= SRC_IMM8|DST_NONE|OP3_NONE,		/* immediate8 operand */
+	ADDRMOD_IMM8_RM		= SRC_IMM8|MOD_RM|DIR_REVERSED|OP3_NONE,	/* immediate8 -> register/memory */
+	ADDRMOD_IMM_RM		= SRC_IMM|MOD_RM|DIR_REVERSED|OP3_NONE,	/* immediate -> register/memory */
+	ADDRMOD_IMM_ACC		= SRC_IMM|DST_ACC|OP3_NONE,		/* immediate -> AL/AX/EAX */
+	ADDRMOD_IMM_REG		= SRC_IMM|DST_REG|OP3_NONE,		/* immediate -> register */
+	ADDRMOD_IMPLIED		= SRC_NONE|DST_NONE|OP3_NONE,		/* no operands */
+	ADDRMOD_MOFFSET_ACC	= SRC_MOFFSET|DST_ACC|OP3_NONE,		/* moffset -> AL/AX/EAX */
+	ADDRMOD_REG		= SRC_REG|DST_NONE|OP3_NONE,		/* register */
+	ADDRMOD_SEG2_REG	= SRC_SEG2_REG|DST_NONE|OP3_NONE,		/* segment register (CS/DS/ES/SS) */
+	ADDRMOD_SEG3_REG	= SRC_SEG3_REG|DST_NONE|OP3_NONE,		/* segment register (FS/GS) */
+	ADDRMOD_SEG3_REG_RM	= SRC_SEG3_REG|MOD_RM|DIR_REVERSED|OP3_NONE,		/* segment register -> register/memory */
+	ADDRMOD_RM_SEG3_REG	= DST_SEG3_REG|MOD_RM|OP3_NONE,		/* register/memory -> segment register */
+	ADDRMOD_REG_RM		= SRC_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* register -> register/memory */
+	ADDRMOD_REL		= SRC_REL|DST_NONE|OP3_NONE,		/* relative */
+	ADDRMOD_RM_REG		= DST_REG|MOD_RM|OP3_NONE,		/* register/memory -> register */
+	ADDRMOD_RM		= DST_NONE|MOD_RM|OP3_NONE,	/* register/memory */
+	ADDRMOD_RM_IMM_REG	= DST_REG|MOD_RM|OP3_IMM,	/* register/memory, immediate -> register */
+	ADDRMOD_RM_IMM8_REG	= DST_REG|MOD_RM|OP3_IMM8,	/* register/memory, immediate8 -> register */
+	ADDRMOD_REG_IMM8_RM	= SRC_REG|MOD_RM|DIR_REVERSED|OP3_IMM8,	/* register, immediate8 -> register/memory */
+	ADDRMOD_REG_CL_RM	= SRC_REG|MOD_RM|DIR_REVERSED|OP3_CL,	/* register, CL -> register/memory */
+	ADDRMOD_FAR_PTR		= DST_NONE|SRC_IMM48|OP3_NONE,	/* far pointer */
+	ADDRMOD_IMM8_IMM16	= SRC_IMM8|DST_IMM16|OP3_NONE, /* immediate8, immediate16 */
+	ADDRMOD_CR_RM		= SRC_CR_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* control register -> register */
+	ADDRMOD_DBG_RM		= SRC_DBG_REG|MOD_RM|DIR_REVERSED|OP3_NONE,	/* debug register -> register */
+	ADDRMOD_RM_CR		= DST_CR_REG|MOD_RM|OP3_NONE,		/* register -> control register */
+	ADDRMOD_RM_DBG		= DST_DBG_REG|MOD_RM|OP3_NONE,		/* register -> debug register */
 };
 
 // Operand numbers
@@ -207,7 +207,6 @@ struct x86_instr {
 	enum x86_rep_prefix	rep_prefix;
 	unsigned char		lock_prefix;
 	unsigned char		addr_size_override;
-	unsigned char		op_size_override;
 	unsigned char		is_two_byte_instr;
 	struct x86_operand	operand[OPNUM_COUNT];
 };
