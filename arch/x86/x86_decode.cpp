@@ -673,7 +673,7 @@ static uint8_t
 decode_dst_reg(struct x86_instr *instr)
 {
 	if (!(instr->flags & MOD_RM))
-		return instr->opcode & 0x07;
+		return instr->first_opcode_byte & 0x07;
 
 	if (instr->flags & DIR_REVERSED)
 		return instr->rm;
@@ -758,7 +758,7 @@ static uint8_t
 decode_src_reg(struct x86_instr *instr)
 {
 	if (!(instr->flags & MOD_RM))
-		return instr->opcode & 0x07;
+		return instr->first_opcode_byte & 0x07;
 
 	if (instr->flags & DIR_REVERSED)
 		return instr->reg_opc;
@@ -803,7 +803,7 @@ decode_src_operand(struct x86_instr *instr)
 		break;
 	case SRC_SEG2_REG:
 		operand->type	= OPTYPE_SEG_REG;
-		operand->reg	= instr->opcode >> 3;
+		operand->reg	= instr->first_opcode_byte >> 3;
 		break;
 	case SRC_SEG3_REG:
 		operand->type	= OPTYPE_SEG_REG;
@@ -811,7 +811,7 @@ decode_src_operand(struct x86_instr *instr)
 			operand->reg = instr->reg_opc;
 		}
 		else {
-			operand->reg = (instr->opcode & 0x38) >> 3;
+			operand->reg = (instr->first_opcode_byte & 0x38) >> 3;
 		}
 		break;
 	case SRC_CR_REG:
@@ -1256,7 +1256,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 		decode = decode_table_one[opcode];
 	}
 
-	instr->opcode = opcode;
+	instr->first_opcode_byte = opcode;
 	instr->type = decode & X86_INSTR_OPC_MASK;
 	instr->flags = decode & ~X86_INSTR_OPC_MASK;
 
@@ -1276,7 +1276,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	}
 
 	if (instr->type == 0) { // This handles X86_OPC_DIFF_SYNTAX, X86_OPC_UNDEFINED and all GROUP_*'s :
-		switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->opcode) {
+		switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->first_opcode_byte) {
 		// Handle decode_table_one entries marked X86_OPC_DIFF_SYNTAX :
 		case 0x62:
 			instr->type = X86_OPC_BOUND;

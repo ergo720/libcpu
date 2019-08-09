@@ -233,7 +233,7 @@ static const char *check_prefix_override(struct x86_instr *instr)
 			return "WORD PTR ";
 		break;
 	default:
-		switch (instr->opcode) {
+		switch (instr->first_opcode_byte) {
 		case 0xFF: // call, jmp
 			if (instr->is_two_byte_instr == 0 && (instr->reg_opc == 3 || instr->reg_opc == 5))
 				return "FWORD PTR ";
@@ -342,7 +342,7 @@ arch_x86_disasm_instr_intel(cpu_t *cpu, addr_t pc, char *line, unsigned int max_
 
 	assert(((cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) == 1);
 	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0) {
-		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode);
+		fprintf(stderr, "error: unable to decode opcode %x\n", instr.first_opcode_byte);
 		exit(1);
 	}
 

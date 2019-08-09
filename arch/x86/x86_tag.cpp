@@ -40,12 +40,13 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 	case X86_OPC_LOOP:
 	case X86_OPC_LOOPE:
 	case X86_OPC_LOOPNE:
-		*new_pc = pc + len + instr.rel_data[0];
 		*tag = TAG_COND_BRANCH;
+		*new_pc = pc + len + instr.rel_data[0];
 		break;
 	case X86_OPC_JMP:
 	case X86_OPC_LJMP:
-		switch (instr.opcode) {
+		*tag = TAG_BRANCH;
+		switch (instr.first_opcode_byte) {
 		case 0xE9:
 		case 0xEB:
 			*new_pc = pc + len + instr.rel_data[0];
@@ -59,28 +60,27 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 		default:
 			break;
 		}
-		*tag = TAG_BRANCH;
 		break;
 	case X86_OPC_CALL:
 	case X86_OPC_LCALL:
 	case X86_OPC_SYSENTER:
-		switch (instr.opcode) {
-		case 0x34:
+		*tag = TAG_CALL;
+		switch (instr.first_opcode_byte) {
+		case 0x34: // X86_OPC_SYSENTER is in decode_table_two[0x34] (nowhere else)
 			*new_pc = NEW_PC_NONE;
 			break;
-		case 0x9A:
+		case 0x9A: // X86_OPC_CALL or X86_OPC_LCALL is selected via X86_OPC_DIFF_SYNTAX in decode_table_one[0x9A]
 			*new_pc = NEW_PC_NONE;
 			break;
-		case 0xE8:
+		case 0xE8: // Only decode_table_one has X86_OPC_CALL in index 0xE8
 			*new_pc = pc + len + instr.rel_data[0];
 			break;
-		case 0xFF:
+		case 0xFF: // decode_table_one[0xFF] = GROUP_5, which forwards to grp5_decode_table, which contains X86_OPC_CALL
 			*new_pc = NEW_PC_NONE;
 			break;
 		default:
 			break;
 		}
-		*tag = TAG_CALL;
 		break;
 	case X86_OPC_RET:
 	case X86_OPC_LRET:

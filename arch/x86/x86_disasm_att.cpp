@@ -267,7 +267,7 @@ static bool check_suffix_override(struct x86_instr *instr)
 			return true;
 		break;
 	default:
-		switch (instr->opcode) {
+		switch (instr->first_opcode_byte) {
 		case 0xEB: // jmp
 			if (instr->is_two_byte_instr == 0)
 				return true;
@@ -364,7 +364,7 @@ arch_x86_disasm_instr_att(cpu_t *cpu, addr_t pc, char *line, unsigned int max_li
 
 	assert(((cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) == 0);
 	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0) {
-		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode);
+		fprintf(stderr, "error: unable to decode opcode %x\n", instr.first_opcode_byte);
 		exit(1);
 	}
 

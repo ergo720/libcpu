@@ -185,10 +185,10 @@ enum {
 	OPNUM_COUNT
 };
 
-struct x86_instr {
+struct x86_instr { /* Instances of x86_instr are populated in arch_x86_decode_instr() */
 	unsigned long		nr_bytes;
 
-	uint8_t			opcode;		/* Opcode byte */
+	uint8_t			first_opcode_byte;		/* Opcode byte */
 	uint8_t			mod;		/* Mod */
 	uint8_t			rm;		/* R/M */
 	uint8_t			reg_opc;	/* Reg/Opcode */
@@ -207,7 +207,7 @@ struct x86_instr {
 	enum x86_rep_prefix	rep_prefix;
 	unsigned char		lock_prefix;
 	unsigned char		addr_size_override;
-	unsigned char		is_two_byte_instr;
+	unsigned char		is_two_byte_instr; /* Only read in arch_x86_disasm_*.cpp */
 	struct x86_operand	operand[OPNUM_COUNT];
 };
 
