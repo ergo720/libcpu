@@ -386,7 +386,7 @@ arch_x86_disasm_instr_att(cpu_t *cpu, addr_t pc, char *line, unsigned int max_li
 	if (!(instr.flags & DST_NONE))
 		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_DST]);
 
-    snprintf(line, max_line, "%s%s%-*s%s %s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], strlen(to_mnemonic(&instr)), to_mnemonic(&instr), add_instr_suffix(&instr), operands);
+    snprintf(line, max_line, "%s%s%-*s%s %s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], (int)strlen(to_mnemonic(&instr)), to_mnemonic(&instr), add_instr_suffix(&instr), operands);
 
     return arch_x86_instr_length(&instr);
 }
