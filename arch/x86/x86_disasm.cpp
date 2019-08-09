@@ -6,7 +6,7 @@
 
 #include "libcpu.h"
 
-static const char *mnemo[] = {
+const char *mnemo[] = {
 	"illegal",
 #define DECLARE_OPC(name,str) str,
 #include "x86_instr.h"

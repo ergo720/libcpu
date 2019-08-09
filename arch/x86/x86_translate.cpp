@@ -50,7 +50,7 @@
 #define DBG_REG_BASE 20
 
 static Value *
-arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsigned opnum)
+arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsigned opnum, size_t *opsize)
 {
 	if (opnum >= OPNUM_COUNT) {
 		assert(0 && "Invalid operand number specified\n");
@@ -61,8 +61,32 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 
 	switch (operand->type) {
 	case OPTYPE_IMM:
-		return CONSTs(32, operand->imm);
+		if (instr->flags & (SRC_IMM8 | OP3_IMM8)) {
+			*opsize = 8;
+			return CONSTs(*opsize, operand->imm);
+		}
+		else if (instr->flags & DST_IMM16) {
+			*opsize = 16;
+			return CONSTs(*opsize, operand->imm);
+		}
+		switch (instr->flags & WIDTH_MASK) {
+		case WIDTH_BYTE:
+			*opsize = 8;
+			break;
+		case WIDTH_WORD:
+			*opsize = 16;
+			break;
+		case WIDTH_DWORD:
+			*opsize = 32;
+			break;
+		default:
+			fprintf(stderr, "Missing operand size in OPTYPE_IMM (calling %s on an instruction without operands?)\n", __func__);
+			*opsize = 0;
+			return NULL;
+		}
+		return CONSTs(*opsize, operand->imm);
 	case OPTYPE_MEM:
+		*opsize = 0;
 		if (instr->addr_size_override == 1) {
 			Value *reg;
 			switch (operand->reg) {
@@ -94,6 +118,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 				assert(0 && "Unknown reg index in OPTYPE_MEM\n");
 				return NULL;
 			}
+			*opsize = 16;
 			return LOADMEM16(reg);
 		}
 		else {
@@ -117,11 +142,28 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 				assert(0 && "Unknown reg index in OPTYPE_MEM\n");
 				return NULL;
 			}
+			*opsize = 32;
 			return LOADMEM32(reg);
 		}
 	case OPTYPE_MOFFSET:
-		return CONSTs(32, operand->disp);
+		switch (instr->flags & WIDTH_MASK) {
+		case WIDTH_BYTE:
+			*opsize = 8;
+			break;
+		case WIDTH_WORD:
+			*opsize = 16;
+			break;
+		case WIDTH_DWORD:
+			*opsize = 32;
+			break;
+		default:
+			fprintf(stderr, "Missing operand size in OPTYPE_MOFFSET (calling %s on an instruction without operands?)\n", __func__);
+			*opsize = 0;
+			return NULL;
+		}
+		return CONSTs(*opsize, operand->disp);
 	case OPTYPE_MEM_DISP:
+		*opsize = 0;
 		if (instr->addr_size_override == 1) {
 			Value *reg;
 			switch (instr->mod) {
@@ -203,6 +245,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 				assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
 				return NULL;
 			}
+			*opsize = 16;
 			return LOADMEM16(reg);
 		}
 		else {
@@ -262,15 +305,18 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 				assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
 				return NULL;
 			}
+			*opsize = 32;
 			return LOADMEM32(reg);
 		}
 	case OPTYPE_REG:
 	case OPTYPE_REG8:
+		*opsize = 0;
 		if (operand->reg > EDI) {
 			assert(0 && "Unknown reg index in OPTYPE_REG(8)\n");
 			return NULL;
 		}
 		if (instr->flags & WIDTH_BYTE || operand->type == OPTYPE_REG8) {
+			*opsize = 8;
 			if (operand->reg < ESP) {
 				return R8(operand->reg);
 			}
@@ -279,12 +325,15 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 			}
 		}
 		else if (instr->flags & WIDTH_WORD) {
+			*opsize = 16;
 			return R16(operand->reg);
 		}
 		else {
+			*opsize = 32;
 			return R32(operand->reg);
 		}
 	case OPTYPE_SEG_REG:
+		*opsize = 0;
 		switch (operand->reg) {
 		case ES: // fallthrough
 		case CS: // fallthrough
@@ -292,6 +341,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 		case DS: // fallthrough
 		case FS: // fallthrough
 		case GS:
+			*opsize = 16;
 			return R16(SEG_REG_BASE + operand->reg);
 		case 6:
 		case 7:
@@ -302,11 +352,13 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 			return NULL;
 		}
 	case OPTYPE_CR_REG:
+		*opsize = 0;
 		switch (operand->reg) {
 		case CR0: // fallthrough
 		case CR2: // fallthrough
 		case CR3: // fallthrough
 		case CR4:
+			*opsize = 32;
 			return R32(CR_REG_BASE + operand->reg);
 		case CR1:
 		case 6:
@@ -318,6 +370,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 			return NULL;
 		}
 	case OPTYPE_DBG_REG:
+		*opsize = 0;
 		switch (operand->reg) {
 		case DR0: // fallthrough
 		case DR1: // fallthrough
@@ -325,6 +378,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 		case DR3: // fallthrough
 		case DR6: // fallthrough
 		case DR7:
+			*opsize = 32;
 			return R32(DBG_REG_BASE + operand->reg);
 		case DR4:
 		case DR5:
@@ -335,17 +389,35 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 			return NULL;
 		}
 	case OPTYPE_REL:
-		return CONSTs(32, operand->rel);
+		switch (instr->flags &WIDTH_MASK) {
+		case WIDTH_BYTE:
+			*opsize = 8;
+			break;
+		case WIDTH_WORD:
+			*opsize = 16;
+			break;
+		case WIDTH_DWORD:
+			*opsize = 32;
+			break;
+		default:
+			fprintf(stderr, "Missing operand size in OPTYPE_REL (calling %s on an instruction without operands?)\n", __func__);
+			*opsize = 0;
+			return NULL;
+		}
+		return CONSTs(*opsize, operand->rel);
 	case OPTYPE_FAR_PTR:
 		if (instr->flags & WIDTH_DWORD) {
+			*opsize = 48;
 			return CONSTs(48, ((uint64_t)operand->seg_sel << 32) | operand->imm);
 		}
 		else {
+			*opsize = 32;
 			return CONSTs(32, ((uint32_t)operand->seg_sel << 16) | operand->imm);
 		}
 	case OPTYPE_SIB_MEM:
 	case OPTYPE_SIB_DISP:
 		assert((instr->mod == 0 || instr->mod == 1 || instr->mod == 2) && instr->rm == 4);
+		*opsize = 0;
 		Value *scale, *idx, *base;
 		if (instr->scale < 4) {
 			scale = CONSTs(32, 1ULL << instr->scale);
@@ -384,10 +456,13 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 		case EBP:
 			switch (instr->mod) {
 			case 0:
+				*opsize = 32;
 				return ADD(MUL(idx, scale), CONSTs(32, instr->disp));
 			case 1:
+				*opsize = 32;
 				return ADD(ADD(MUL(idx, scale), SEXT(32, CONSTs(8, operand->disp))), GPR(EBP));
 			case 2:
+				*opsize = 32;
 				return ADD(ADD(MUL(idx, scale), CONSTs(32, operand->disp)), GPR(EBP));
 			case 3:
 				assert(0 && "instr->mod specifies OPTYPE_REG with sib addressing mode!\n");
@@ -400,6 +475,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 			assert(0 && "Unknown sib base specified\n");
 			return NULL;
 		}
+		*opsize = 32;
 		return ADD(base, MUL(idx, scale));
 	default:
 		assert(0 && "Unknown operand type specified\n");
