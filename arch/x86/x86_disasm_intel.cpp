@@ -12,11 +12,7 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-static const char *mnemo[] = {
-#define DECLARE_INSTR(name,str) str,
-#include "x86_instr.h"
-#undef DECLARE_INSTR
-};
+extern static const char *mnemo[];
 
 static const char *to_mnemonic(struct x86_instr *instr)
 {
@@ -212,27 +208,27 @@ static const char *to_dbg_reg_name(struct x86_instr *instr, unsigned int reg_num
 static const char *check_prefix_override(struct x86_instr *instr)
 {
 	switch (instr->type) {
-	case INSTR_LES:
-	case INSTR_LDS:
+	case X86_OPC_LES:
+	case X86_OPC_LDS:
 		if (instr->is_two_byte_instr == 0)
 			return "FWORD PTR ";
 		break;
-	case INSTR_LSS:
-	case INSTR_LFS:
-	case INSTR_LGS:
-	case INSTR_SGDTD:
-	case INSTR_SIDTD:
-	case INSTR_LGDTD:
-	case INSTR_LIDTD:
-	case INSTR_SGDTW:
-	case INSTR_SIDTW:
-	case INSTR_LGDTW:
-	case INSTR_LIDTW:
+	case X86_OPC_LSS:
+	case X86_OPC_LFS:
+	case X86_OPC_LGS:
+	case X86_OPC_SGDTD:
+	case X86_OPC_SIDTD:
+	case X86_OPC_LGDTD:
+	case X86_OPC_LIDTD:
+	case X86_OPC_SGDTW:
+	case X86_OPC_SIDTW:
+	case X86_OPC_LGDTW:
+	case X86_OPC_LIDTW:
 		if (instr->is_two_byte_instr == 1)
 			return "";
 		break;
-	case INSTR_LAR:
-	case INSTR_LSL:
+	case X86_OPC_LAR:
+	case X86_OPC_LSL:
 		if (instr->is_two_byte_instr == 1)
 			return "WORD PTR ";
 		break;

@@ -201,7 +201,7 @@ struct x86_instr {
 		int32_t			rel_data[2];	/* Relative address data */
 	};
 
-	unsigned long long	type;		/* See enum x86_instr_types */
+	unsigned long long	type;		/* See enum arch_x86_opcode */
 	unsigned long long	flags;		/* See enum x86_instr_flags */
 	enum x86_seg_override	seg_override;
 	enum x86_rep_prefix	rep_prefix;

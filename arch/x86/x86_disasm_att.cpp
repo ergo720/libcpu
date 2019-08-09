@@ -12,11 +12,7 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-static const char *mnemo[] = {
-#define DECLARE_INSTR(name,str) str,
-#include "x86_instr.h"
-#undef DECLARE_INSTR
-};
+extern static const char *mnemo[];
 
 static const char *to_mnemonic(struct x86_instr *instr)
 {
@@ -212,61 +208,61 @@ static const char *to_dbg_reg_name(struct x86_instr *instr, unsigned int reg_num
 static bool check_suffix_override(struct x86_instr *instr)
 {
 	switch (instr->type) {
-	case INSTR_ARPL:
-	case INSTR_RET:
-	case INSTR_ENTER:
-	case INSTR_LRET:
-	case INSTR_INT:
-	case INSTR_AAM:
-	case INSTR_AAD:
-	case INSTR_LOOPNE:
-	case INSTR_LOOPE:
-	case INSTR_LOOP:
-	case INSTR_JECXZ:
+	case X86_OPC_ARPL:
+	case X86_OPC_RET:
+	case X86_OPC_ENTER:
+	case X86_OPC_LRET:
+	case X86_OPC_INT:
+	case X86_OPC_AAM:
+	case X86_OPC_AAD:
+	case X86_OPC_LOOPNE:
+	case X86_OPC_LOOPE:
+	case X86_OPC_LOOP:
+	case X86_OPC_JECXZ:
 		if (instr->is_two_byte_instr == 0)
 			return true;
 		break;
-	case INSTR_JO:
-	case INSTR_JNO:
-	case INSTR_JB:
-	case INSTR_JNB:
-	case INSTR_JZ:
-	case INSTR_JNE:
-	case INSTR_JBE:
-	case INSTR_JA:
-	case INSTR_JS:
-	case INSTR_JNS:
-	case INSTR_JPE:
-	case INSTR_JPO:
-	case INSTR_JL:
-	case INSTR_JGE:
-	case INSTR_JLE:
-	case INSTR_JG:
+	case X86_OPC_JO:
+	case X86_OPC_JNO:
+	case X86_OPC_JB:
+	case X86_OPC_JNB:
+	case X86_OPC_JZ:
+	case X86_OPC_JNE:
+	case X86_OPC_JBE:
+	case X86_OPC_JA:
+	case X86_OPC_JS:
+	case X86_OPC_JNS:
+	case X86_OPC_JPE:
+	case X86_OPC_JPO:
+	case X86_OPC_JL:
+	case X86_OPC_JGE:
+	case X86_OPC_JLE:
+	case X86_OPC_JG:
 		return true;
-	case INSTR_LMSW:
-	case INSTR_INVLPG:
-	case INSTR_LLDT:
-	case INSTR_LTR:
-	case INSTR_VERR:
-	case INSTR_VERW:
-	case INSTR_SETO:
-	case INSTR_SETNO:
-	case INSTR_SETB:
-	case INSTR_SETNB:
-	case INSTR_SETZ:
-	case INSTR_SETNE:
-	case INSTR_SETBE:
-	case INSTR_SETA:
-	case INSTR_SETS:
-	case INSTR_SETNS:
-	case INSTR_SETPE:
-	case INSTR_SETPO:
-	case INSTR_SETL:
-	case INSTR_SETGE:
-	case INSTR_SETLE:
-	case INSTR_SETG:
-	case INSTR_CMPXCHG8B:
-	case INSTR_BSWAP:
+	case X86_OPC_LMSW:
+	case X86_OPC_INVLPG:
+	case X86_OPC_LLDT:
+	case X86_OPC_LTR:
+	case X86_OPC_VERR:
+	case X86_OPC_VERW:
+	case X86_OPC_SETO:
+	case X86_OPC_SETNO:
+	case X86_OPC_SETB:
+	case X86_OPC_SETNB:
+	case X86_OPC_SETZ:
+	case X86_OPC_SETNE:
+	case X86_OPC_SETBE:
+	case X86_OPC_SETA:
+	case X86_OPC_SETS:
+	case X86_OPC_SETNS:
+	case X86_OPC_SETPE:
+	case X86_OPC_SETPO:
+	case X86_OPC_SETL:
+	case X86_OPC_SETGE:
+	case X86_OPC_SETLE:
+	case X86_OPC_SETG:
+	case X86_OPC_CMPXCHG8B:
+	case X86_OPC_BSWAP:
 		if (instr->is_two_byte_instr == 1)
 			return true;
 		break;

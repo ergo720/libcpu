@@ -21,30 +21,30 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 	len = arch_x86_instr_length(&instr);
 
 	switch (instr.type) {
-	case INSTR_JO:
-	case INSTR_JNO:
-	case INSTR_JB:
-	case INSTR_JNB:
-	case INSTR_JZ:
-	case INSTR_JNE:
-	case INSTR_JBE:
-	case INSTR_JA:
-	case INSTR_JS:
-	case INSTR_JNS:
-	case INSTR_JPE:
-	case INSTR_JPO:
-	case INSTR_JL:
-	case INSTR_JGE:
-	case INSTR_JLE:
-	case INSTR_JG:
-	case INSTR_LOOP:
-	case INSTR_LOOPE:
-	case INSTR_LOOPNE:
+	case X86_OPC_JO:
+	case X86_OPC_JNO:
+	case X86_OPC_JB:
+	case X86_OPC_JNB:
+	case X86_OPC_JZ:
+	case X86_OPC_JNE:
+	case X86_OPC_JBE:
+	case X86_OPC_JA:
+	case X86_OPC_JS:
+	case X86_OPC_JNS:
+	case X86_OPC_JPE:
+	case X86_OPC_JPO:
+	case X86_OPC_JL:
+	case X86_OPC_JGE:
+	case X86_OPC_JLE:
+	case X86_OPC_JG:
+	case X86_OPC_LOOP:
+	case X86_OPC_LOOPE:
+	case X86_OPC_LOOPNE:
 		*new_pc = pc + len + instr.rel_data[0];
 		*tag = TAG_COND_BRANCH;
 		break;
-	case INSTR_JMP:
-	case INSTR_LJMP:
+	case X86_OPC_JMP:
+	case X86_OPC_LJMP:
 		switch (instr.opcode) {
 		case 0xE9:
 		case 0xEB:
@@ -61,9 +61,9 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 		}
 		*tag = TAG_BRANCH;
 		break;
-	case INSTR_CALL:
-	case INSTR_LCALL:
-	case INSTR_SYSENTER:
+	case X86_OPC_CALL:
+	case X86_OPC_LCALL:
+	case X86_OPC_SYSENTER:
 		switch (instr.opcode) {
 		case 0x34:
 			*new_pc = NEW_PC_NONE;
@@ -82,17 +82,17 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 		}
 		*tag = TAG_CALL;
 		break;
-	case INSTR_RET:
-	case INSTR_LRET:
-	case INSTR_RETF:
-	case INSTR_IRET:
-	case INSTR_SYSEXIT:
+	case X86_OPC_RET:
+	case X86_OPC_LRET:
+	case X86_OPC_RETF:
+	case X86_OPC_IRET:
+	case X86_OPC_SYSEXIT:
 		*tag = TAG_RET;
 		break;
-	case INSTR_INT:
-	case INSTR_INTO:
-	case INSTR_INT3:
-	case INSTR_BOUND:
+	case X86_OPC_INT:
+	case X86_OPC_INTO:
+	case X86_OPC_INT3:
+	case X86_OPC_BOUND:
 		*tag = TAG_TRAP;
 		break;
 	default:

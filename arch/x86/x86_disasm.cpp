@@ -6,6 +6,13 @@
 
 #include "libcpu.h"
 
+static const char *mnemo[] = {
+	"illegal",
+#define DECLARE_OPC(name,str) str,
+#include "x86_instr.h"
+#undef DECLARE_OPC
+};
+
 extern int arch_x86_disasm_instr_att(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line);
 extern int arch_x86_disasm_instr_intel(cpu_t *cpu, addr_t pc, char *line, unsigned int max_line);
 

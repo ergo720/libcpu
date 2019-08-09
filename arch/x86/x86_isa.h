@@ -26,10 +26,12 @@
 #define VIP_SHIFT   20
 #define ID_SHIFT    21
 
-enum x86_instr_types {
-#define DECLARE_INSTR(name,str) name,
+// the instructions opcode
+typedef enum arch_x86_opcode {
+	X86_OPC_ILLEGAL = 0,
+#define DECLARE_OPC(name,str) name,
 #include "x86_instr.h"
-#undef DECLARE_INSTR
-};
+#undef DECLARE_OPC
+} arch_x86_opcode_t;
 
 #endif /* X86_ISA_H */
