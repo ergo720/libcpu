@@ -1260,6 +1260,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	instr->type = decode & X86_INSTR_OPC_MASK;
 	instr->flags = decode & ~X86_INSTR_OPC_MASK;
 
+	// Detect X86_OPC_UNDEFINED cases in decode_table_one and decode_table_two, which are forbidden to have flags :
 	if (instr->flags == 0) /* Unrecognized? */
 		return -1;
 
@@ -1276,7 +1277,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 
 	if (instr->type == 0) { // This handles X86_OPC_DIFF_SYNTAX, X86_OPC_UNDEFINED and all GROUP_*'s :
 		switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->opcode) {
-		// Handle X86_OPC_DIFF_SYNTAX markers in decode_table_one :
+		// Handle decode_table_one entries marked X86_OPC_DIFF_SYNTAX :
 		case 0x62:
 			instr->type = X86_OPC_BOUND;
 			instr->flags |= WIDTH_DWORD;
@@ -1345,7 +1346,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 		case 0xEA | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
 			instr->type = X86_OPC_JMP;
 			break;
-		// Handle X86_OPC_DIFF_SYNTAX markers in decode_table_two :
+		// Handle decode_table_two entries marked X86_OPC_DIFF_SYNTAX :
 		case 0xB6:
 		case 0xB6 | DIFF_SYNTAX_SIZE_OVERRIDE:
 			instr->type = X86_OPC_MOVZXB;
@@ -1398,7 +1399,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 				instr->type = grp5_decode_table[instr->reg_opc];
 				if (instr->type == X86_OPC_DIFF_SYNTAX) {
 					switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | instr->reg_opc) {
-					// X86_OPC_DIFF_SYNTAX markers in grp5_decode_table :
+					// Handle grp5_decode_table entries marked X86_OPC_DIFF_SYNTAX :
 					case 0x3:
 						instr->type = X86_OPC_LCALL;
 						break;
@@ -1424,7 +1425,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 				switch (instr->type) {
 				case X86_OPC_DIFF_SYNTAX:
 					switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->reg_opc) {
-					// X86_OPC_DIFF_SYNTAX markers in grp7_decode_table :
+					// Handle grp7_decode_table entries marked X86_OPC_DIFF_SYNTAX :
 					case 0x0:
 						instr->type = X86_OPC_SGDTL;
 						break;
