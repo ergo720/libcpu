@@ -102,12 +102,12 @@ enum {
 // Four register classes
 enum {
 	CPU_REGCLASS_GPR, // General Purpose
+	CPU_REGCLASS_XR,  // Extra Registers, the core expects these to follow
+				  // GPRs in the memory layout, they are kept separate
+				  // to avoid confusing the client about the number of
+				  // registers available.
 	CPU_REGCLASS_FPR, // Floating Point
 	CPU_REGCLASS_VR,  // Vector
-	CPU_REGCLASS_XR,  // Extra Registers, the core expects these to follow
-	 				  // GPRs in the memory layout, they are kept separate
-					  // to avoid confusing the client about the number of
-					  // registers available.
 	CPU_REGCLASS_COUNT
 };
 // @@@END_DEPRECATION
