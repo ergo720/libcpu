@@ -647,6 +647,27 @@ static const uint32_t grp9_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
+static const uint32_t[] decode_tables = {
+	decode_table_one,
+	decode_table_two,
+	grp1_decode_table,
+	grp2_decode_table,
+	grp3_decode_table,
+	grp4_decode_table,
+	grp5_decode_table,
+	grp6_decode_table,
+	grp7_decode_table,
+	grp8_decode_table,
+	grp9_decode_table,
+};
+
+// offset 0 = standard, 1 = size_override, 2 = intel syntax, 3 = intel syntax AND size override 
+static const arch_x86_opcode diff_syntax_opcodes[] = {
+	// TODO : Populate this
+};
+
+static const uint64_t diff_syntax_flags_0x62 = {WIDTH_DWORD, WIDTH_WORD, WIDTH_QWORD, WIDTH_DWORD};
+
 static void
 decode_third_operand(struct x86_instr *instr)
 {
@@ -673,7 +694,7 @@ static uint8_t
 decode_dst_reg(struct x86_instr *instr)
 {
 	if (!(instr->flags & MOD_RM))
-		return instr->first_opcode_byte & 0x07;
+		return instr->opcode_byte & 0x07;
 
 	if (instr->flags & DIR_REVERSED)
 		return instr->rm;
@@ -758,7 +779,7 @@ static uint8_t
 decode_src_reg(struct x86_instr *instr)
 {
 	if (!(instr->flags & MOD_RM))
-		return instr->first_opcode_byte & 0x07;
+		return instr->opcode_byte & 0x07;
 
 	if (instr->flags & DIR_REVERSED)
 		return instr->reg_opc;
@@ -803,7 +824,7 @@ decode_src_operand(struct x86_instr *instr)
 		break;
 	case SRC_SEG2_REG:
 		operand->type	= OPTYPE_SEG_REG;
-		operand->reg	= instr->first_opcode_byte >> 3;
+		operand->reg	= instr->opcode_byte >> 3;
 		break;
 	case SRC_SEG3_REG:
 		operand->type	= OPTYPE_SEG_REG;
@@ -811,7 +832,7 @@ decode_src_operand(struct x86_instr *instr)
 			operand->reg = instr->reg_opc;
 		}
 		else {
-			operand->reg = (instr->first_opcode_byte & 0x38) >> 3;
+			operand->reg = (instr->opcode_byte & 0x38) >> 3;
 		}
 		break;
 	case SRC_CR_REG:
@@ -1188,8 +1209,152 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 	}
 }
 
+// Macro's to select either side of a tuple expressed as (left:right)
+#define TUPLE_LEFT(L_R) (true?L_R) 
+#define TUPLE_RIGHT(L_R) (false?L_R)
+
+// Bitfield extraction macro's
+#define GET_SHIFT(TUPLE) TUPLE_LEFT(TUPLE) 
+#define GET_SIZE(TUPLE) TUPLE_RIGHT(TUPLE)
+#define GET_MASK(TUPLE) ((1 << GET_SIZE(TUPLE)) - 1)
+#define GET_FIELD(v, TUPLE) ((v >> GET_SHIFT(TUPLE)) & GET_MASK(TUPLE))
+
+// Offset:Size tuples for bitfields :
+#define X86_OPCODE 0:8
+#define X86_DECODE_CLASS 61:2
+#define X86_PREFIX_INDEX 58:3
+#define X86_PREFIX_VALUE 33:3
+#define X86_DECODE_GROUP 24:4
+
+#define X86_DECODE_CLASS_INVALID 0
+#define X86_DECODE_CLASS_PREFIX 1
+#define X86_DECODE_CLASS_GROUP 2
+#define X86_DECODE_CLASS_DIFF_SYNTAX 3
+
+#define X86_GROUP(x) (x - 1)
+
 int
 arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel)
+{
+	addr_t start_pc;
+	unsigned decode_group;
+	uint8_t instr_byte;
+	uint64_t decode;
+	arch_x86_opcode opcode;
+	uint8_t bits;
+
+	/* Set default values into the decoded x86 instruction struct */
+	instr->seg_override	= NO_OVERRIDE;
+	instr->rep_prefix	= NO_PREFIX;
+	instr->lock_prefix	= 0;
+	instr->addr_size_override = 0;
+	instr->op_size_override = 0;
+	instr->is_two_byte_instr = 0;
+
+	// Start decoding here, initially using decode_table_one :
+	start_pc = pc;
+	decode_group = 0;
+fetch_byte:
+	instr_byte = RAM[pc++];
+	instr->opcode_byte = instr_byte;
+decode_byte:
+	decode = decode_tables[decode_group][instr_byte];
+	opcode = (arch_x86_opcode)GET_FIELD(decode, X86_OPCODE);
+	if (opcode == 0) {
+		switch (GET_FIELD(decode, X86_DECODE_CLASS)) {
+		case X86_DECODE_CLASS_INVALID:
+			// This handles all occurences of X86_OPC_UNDEFINED :
+			return -1;
+		case X86_DECODE_CLASS_PREFIX:
+			// All prefix bytes set an instruction variable to some value and will fetch and decode another byte :
+			bits = GET_FIELD(decode, X86_PREFIX_INDEX);
+			instr->prefix_values[bits] = GET_FIELD(decode, X86_PREFIX_VALUE);
+			// Recognize prefix byte 0x0F; Run the next byte through decode_table_two :
+			if (instr_byte == 0x0F) // Equivalent to: if (bits == X86_PREFIX_INDEX_IS_TWO_BYTE_INSTR)
+				decode_group = 1; // Use decode_table_two (instr->is_two_byte_instr is already set above via prefix_values[])
+			goto fetch_byte;
+		case X86_DECODE_CLASS_GROUP:
+			// Do group side-steps by repeating a fetch-and-decode using the indicated group and index bits :
+			decode_modrm_fields(instr, RAM[pc++]);
+			decode_group = GET_FIELD(decode, X86_GROUP);
+			instr_byte = instr->reg_opc;
+			goto decode_byte;
+		case X86_DECODE_CLASS_DIFF_SYNTAX: {
+			bits = instr->op_size_override | (use_intel << 1); // offset 0 = standard, 1 = size_override, 2 = intel syntax, 3 = intel syntax AND size override 
+			opcode = diff_syntax_opcodes[GET_FIELD(decode, X86_DIFF_SYNTAX)][bits];
+			if (instr_byte == 0x62)
+				instr->flags |= diff_syntax_flags_0x62[bits];
+			}
+		}
+	}
+
+	instr->type = opcode;
+	if (decode_group <= 1) {
+		if (instr->flags & MOD_RM) {
+			decode_modrm_fields(instr, RAM[pc++]);
+			decode_modrm_addr_modes(instr);
+		}
+	} else {
+		switch (opcode) {
+		case X86_OPC_TEST:
+			if (decode_group == X86_GROUP(3)) {
+				instr->flags &= ~ADDRMOD_RM;
+				instr->flags |= ADDRMOD_IMM_RM;
+			}
+			break;
+		// These appear only in grp7_decode_table :
+		case X86_OPC_LMSW:
+		case X86_OPC_SMSW:
+			instr->flags &= ~WIDTH_DWORD;
+			instr->flags |= WIDTH_WORD;
+			break;
+		case X86_OPC_INVLPG:
+			instr->flags &= ~WIDTH_DWORD;
+			instr->flags |= WIDTH_BYTE;
+			break;
+		// no default
+		}
+		decode_modrm_addr_modes(instr);
+	}
+
+	if (instr->op_size_override) {
+		if (instr->flags & WIDTH_DWORD) {
+			instr->flags &= ~WIDTH_DWORD;
+			instr->flags |= WIDTH_WORD;
+		} else if (instr->flags & WIDTH_QWORD) {
+			instr->flags &= ~WIDTH_QWORD;
+			instr->flags |= WIDTH_DWORD;
+		}
+	}
+
+	if (instr->flags & SIB)
+		decode_sib_byte(instr, RAM[pc++]);
+
+	if (instr->flags & MEM_DISP_MASK)
+		decode_disp(instr, RAM, &pc);
+
+	if (instr->flags & MOFFSET_MASK)
+		decode_moffset(instr, RAM, &pc);
+
+	if (instr->flags & IMM_MASK)
+		decode_imm(instr, RAM, &pc);
+
+	if (instr->flags & REL_MASK)
+		decode_rel(instr, RAM, &pc);
+
+	decode_src_operand(instr);
+
+	decode_dst_operand(instr);
+
+	decode_third_operand(instr);
+
+	instr->nr_bytes = (unsigned long)(pc - start_pc);
+
+	return 0;
+}
+
+int
+arch_x86_decode_instr_old(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel)
 {
 	uint64_t decode;
 	uint8_t opcode;
@@ -1256,7 +1421,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 		decode = decode_table_one[opcode];
 	}
 
-	instr->first_opcode_byte = opcode;
+	instr->opcode_byte = opcode;
 	instr->type = decode & X86_INSTR_OPC_MASK;
 	instr->flags = decode & ~X86_INSTR_OPC_MASK;
 
@@ -1276,7 +1441,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	}
 
 	if (instr->type == 0) { // This handles X86_OPC_DIFF_SYNTAX, X86_OPC_UNDEFINED and all GROUP_*'s :
-		switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->first_opcode_byte) {
+		switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->opcode_byte) {
 		// Handle decode_table_one entries marked X86_OPC_DIFF_SYNTAX :
 		case 0x62:
 			instr->type = X86_OPC_BOUND;

@@ -188,7 +188,7 @@ enum {
 struct x86_instr { /* Instances of x86_instr are populated in arch_x86_decode_instr() */
 	unsigned long		nr_bytes;
 
-	uint8_t			first_opcode_byte;		/* Opcode byte */
+	uint8_t			opcode_byte;		/* Opcode byte */
 	uint8_t			mod;		/* Mod */
 	uint8_t			rm;		/* R/M */
 	uint8_t			reg_opc;	/* Reg/Opcode */
@@ -203,11 +203,24 @@ struct x86_instr { /* Instances of x86_instr are populated in arch_x86_decode_in
 
 	unsigned long long	type;		/* See enum arch_x86_opcode */
 	unsigned long long	flags;		/* See enum x86_instr_flags */
-	enum x86_seg_override	seg_override;
-	enum x86_rep_prefix	rep_prefix;
-	unsigned char		lock_prefix;
-	unsigned char		addr_size_override;
-	unsigned char		is_two_byte_instr; /* Only read in arch_x86_disasm_*.cpp */
+	union {
+		struct {
+#define X86_PREFIX_INDEX_SEG_OVERRIDE 0
+			enum x86_seg_override seg_override;
+#define X86_PREFIX_INDEX_REP_OVERRIDE 1
+			enum x86_rep_prefix rep_prefix;
+#define X86_PREFIX_INDEX_LOCK_PREFIX 2
+			uint8_t lock_prefix;
+#define X86_PREFIX_INDEX_ADDR_SIZE_OVERRIDE 3
+			uint8_t addr_size_override;
+#define X86_PREFIX_INDEX_OP_SIZE_OVERRIDE 4
+			uint8_t op_size_override;
+#define X86_PREFIX_INDEX_IS_TWO_BYTE_INSTR 5
+			uint8_t is_two_byte_instr; /* Only read in arch_x86_disasm_*.cpp */
+#define X86_PREFIX_INDEX_COUNT 6
+		}
+		uint8_t prefix_values[6];
+	}
 	struct x86_operand	operand[OPNUM_COUNT];
 };
 
