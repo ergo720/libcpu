@@ -15,12 +15,13 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 	struct x86_instr instr;
 	int len;
 
+	// TODO : Is INTEL_SYNTAX needed during tagging? If not, less opcodes would need to be checked for below.
 	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0)
 		return -1;
 
 	len = arch_x86_instr_length(&instr);
 
-	switch (instr.type) {
+	switch (instr.opcode) {
 	case X86_OPC_JO:
 	case X86_OPC_JNO:
 	case X86_OPC_JB:
@@ -46,7 +47,7 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 	case X86_OPC_JMP:
 	case X86_OPC_LJMP:
 		*tag = TAG_BRANCH;
-		switch (instr.first_opcode_byte) {
+		switch (instr.opcode_byte) {
 		case 0xE9:
 		case 0xEB:
 			*new_pc = pc + len + instr.rel_data[0];
@@ -61,11 +62,11 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 			break;
 		}
 		break;
-	case X86_OPC_CALL:
-	case X86_OPC_LCALL:
+	case X86_OPC_CALL: // Intel syntax specific
+	case X86_OPC_LCALL: // AT&T syntax specific
 	case X86_OPC_SYSENTER:
 		*tag = TAG_CALL;
-		switch (instr.first_opcode_byte) {
+		switch (instr.opcode_byte) {
 		case 0x34: // X86_OPC_SYSENTER is in decode_table_two[0x34] (nowhere else)
 			*new_pc = NEW_PC_NONE;
 			break;

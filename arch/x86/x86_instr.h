@@ -16,12 +16,12 @@ DECLARE_OPC(X86_OPC_BTR, "btr")
 DECLARE_OPC(X86_OPC_BTS, "bts")
 DECLARE_OPC(X86_OPC_CALL, "call")
 DECLARE_OPC(X86_OPC_CBW, "cbw")
-DECLARE_OPC(X86_OPC_CBTV, "cbtv") // att syntax specific
+DECLARE_OPC(X86_OPC_CBTV, "cbtv") // AT&T syntax specific
 DECLARE_OPC(X86_OPC_CDQ, "cdq")
 DECLARE_OPC(X86_OPC_CLC, "clc")
 DECLARE_OPC(X86_OPC_CLD, "cld")
 DECLARE_OPC(X86_OPC_CLI, "cli")
-DECLARE_OPC(X86_OPC_CLTD, "cltd") // att syntax specific
+DECLARE_OPC(X86_OPC_CLTD, "cltd") // AT&T syntax specific
 DECLARE_OPC(X86_OPC_CLTS, "clts")
 DECLARE_OPC(X86_OPC_CMC, "cmc")
 DECLARE_OPC(X86_OPC_CMOVA, "cmova")
@@ -47,8 +47,8 @@ DECLARE_OPC(X86_OPC_CMPXCHG, "cmpxchg")
 DECLARE_OPC(X86_OPC_CPUID, "cpuid")
 DECLARE_OPC(X86_OPC_CWD, "cwd")
 DECLARE_OPC(X86_OPC_CWDE, "cwde")
-DECLARE_OPC(X86_OPC_CWTD, "cwtd") // att syntax specific
-DECLARE_OPC(X86_OPC_CWTL, "cwtl") // att syntax specific
+DECLARE_OPC(X86_OPC_CWTD, "cwtd") // AT&T syntax specific
+DECLARE_OPC(X86_OPC_CWTL, "cwtl") // AT&T syntax specific
 DECLARE_OPC(X86_OPC_DAA, "daa")
 DECLARE_OPC(X86_OPC_DAS, "das")
 DECLARE_OPC(X86_OPC_DEC, "dec")
@@ -101,20 +101,20 @@ DECLARE_OPC(X86_OPC_JS, "js")
 DECLARE_OPC(X86_OPC_JZ, "jz")
 DECLARE_OPC(X86_OPC_LAHF, "lahf")
 DECLARE_OPC(X86_OPC_LAR, "lar")
-DECLARE_OPC(X86_OPC_LCALL, "lcall") // att syntax specific
+DECLARE_OPC(X86_OPC_LCALL, "lcall") // AT&T syntax specific
 DECLARE_OPC(X86_OPC_LDS, "lds")
 DECLARE_OPC(X86_OPC_LEA, "lea")
 DECLARE_OPC(X86_OPC_LEAVE, "leave")
 DECLARE_OPC(X86_OPC_LES, "les")
 DECLARE_OPC(X86_OPC_LFS, "lfs")
 DECLARE_OPC(X86_OPC_LGDTD, "lgdtd")
-DECLARE_OPC(X86_OPC_LGDTL, "lgdtl")  // att syntax specific
+DECLARE_OPC(X86_OPC_LGDTL, "lgdtl")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_LGDTW, "lgdtw")
 DECLARE_OPC(X86_OPC_LGS, "lgs")
 DECLARE_OPC(X86_OPC_LIDTD, "lidtd")
-DECLARE_OPC(X86_OPC_LIDTL, "lidtl")  // att syntax specific
+DECLARE_OPC(X86_OPC_LIDTL, "lidtl")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_LIDTW, "lidtw")
-DECLARE_OPC(X86_OPC_LJMP, "ljmp")  // att syntax specific
+DECLARE_OPC(X86_OPC_LJMP, "ljmp")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_LLDT, "lldt")
 DECLARE_OPC(X86_OPC_LMSW, "lmsw")
 DECLARE_OPC(X86_OPC_LODS, "lods")
@@ -123,18 +123,18 @@ DECLARE_OPC(X86_OPC_LOOPE, "loope")
 DECLARE_OPC(X86_OPC_LOOPNE, "loopne")
 DECLARE_OPC(X86_OPC_LOOPNZ, "loopnz")
 DECLARE_OPC(X86_OPC_LOOPZ, "loopz")
-DECLARE_OPC(X86_OPC_LRET, "lret")  // att syntax specific
+DECLARE_OPC(X86_OPC_LRET, "lret")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_LSL, "lsl")
 DECLARE_OPC(X86_OPC_LSS, "lss")
 DECLARE_OPC(X86_OPC_LTR, "ltr")
 DECLARE_OPC(X86_OPC_MOV, "mov")
 DECLARE_OPC(X86_OPC_MOVS, "movs")
 DECLARE_OPC(X86_OPC_MOVSX, "movsx")
-DECLARE_OPC(X86_OPC_MOVSXB, "movsb")  // att syntax specific
-DECLARE_OPC(X86_OPC_MOVSXW, "movsw")  // att syntax specific
+DECLARE_OPC(X86_OPC_MOVSXB, "movsb")  // AT&T syntax specific
+DECLARE_OPC(X86_OPC_MOVSXW, "movsw")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_MOVZX, "movzx")
-DECLARE_OPC(X86_OPC_MOVZXB, "movzb")  // att syntax specific
-DECLARE_OPC(X86_OPC_MOVZXW, "movzw")  // att syntax specific
+DECLARE_OPC(X86_OPC_MOVZXB, "movzb")  // AT&T syntax specific
+DECLARE_OPC(X86_OPC_MOVZXW, "movzw")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_MUL, "mul")
 DECLARE_OPC(X86_OPC_NEG, "neg")
 DECLARE_OPC(X86_OPC_NOP, "nop")
@@ -185,14 +185,14 @@ DECLARE_OPC(X86_OPC_SETPO, "setpo")
 DECLARE_OPC(X86_OPC_SETS, "sets")
 DECLARE_OPC(X86_OPC_SETZ, "setz")
 DECLARE_OPC(X86_OPC_SGDTD, "sgdtd")
-DECLARE_OPC(X86_OPC_SGDTL, "sgdtl")  // att syntax specific
+DECLARE_OPC(X86_OPC_SGDTL, "sgdtl")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_SGDTW, "sgdtw")
 DECLARE_OPC(X86_OPC_SHL, "shl")
 DECLARE_OPC(X86_OPC_SHLD, "shld")
 DECLARE_OPC(X86_OPC_SHR, "shr")
 DECLARE_OPC(X86_OPC_SHRD, "shrd")
 DECLARE_OPC(X86_OPC_SIDTD, "sidtd")
-DECLARE_OPC(X86_OPC_SIDTL, "sidtl")  // att syntax specific
+DECLARE_OPC(X86_OPC_SIDTL, "sidtl")  // AT&T syntax specific
 DECLARE_OPC(X86_OPC_SIDTW, "sidtw")
 DECLARE_OPC(X86_OPC_SLDT, "sldt")
 DECLARE_OPC(X86_OPC_SMSW, "smsw")

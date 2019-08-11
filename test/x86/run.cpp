@@ -28,7 +28,7 @@ main(int argc, char **argv)
 	cpu_t *cpu;
 	uint8_t *RAM;
 	FILE *f;
-	int ramsize;
+	size_t ramsize;
 
 	int singlestep = SINGLESTEP_NONE;
 	int log = 1;
@@ -83,7 +83,7 @@ main(int argc, char **argv)
 		return 2;
 	}
 	cpu->code_start = START;
-	cpu->code_end = cpu->code_start + fread(&RAM[cpu->code_start], 1, ramsize-cpu->code_start, f);
+	cpu->code_end = cpu->code_start + (addr_t)fread(&RAM[cpu->code_start], 1, ramsize-(size_t)cpu->code_start, f);
 	fclose(f);
 	cpu->code_entry = cpu->code_start + ENTRY;
 

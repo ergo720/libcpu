@@ -1,7 +1,7 @@
 /*
  * libcpu: x86_disasm.cpp
  *
- * disassembler (intel syntax)
+ * disassembler (Intel syntax)
  */
 
 #include <stdlib.h>
@@ -16,7 +16,7 @@ extern const char *mnemo[];
 
 static const char *to_mnemonic(struct x86_instr *instr)
 {
-	return mnemo[instr->type];
+	return mnemo[instr->opcode];
 }
 
 static const char *byte_reg_names[] = {
@@ -207,7 +207,7 @@ static const char *to_dbg_reg_name(struct x86_instr *instr, unsigned int reg_num
 
 static const char *check_prefix_override(struct x86_instr *instr)
 {
-	switch (instr->type) {
+	switch (instr->opcode) {
 	case X86_OPC_LES:
 	case X86_OPC_LDS:
 		if (instr->is_two_byte_instr == 0)
@@ -233,7 +233,7 @@ static const char *check_prefix_override(struct x86_instr *instr)
 			return "WORD PTR ";
 		break;
 	default:
-		switch (instr->first_opcode_byte) {
+		switch (instr->opcode_byte) {
 		case 0xFF: // call, jmp
 			if (instr->is_two_byte_instr == 0 && (instr->reg_opc == 3 || instr->reg_opc == 5))
 				return "FWORD PTR ";
@@ -342,7 +342,7 @@ arch_x86_disasm_instr_intel(cpu_t *cpu, addr_t pc, char *line, unsigned int max_
 
 	assert(((cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) == 1);
 	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0) {
-		fprintf(stderr, "error: unable to decode opcode %x\n", instr.first_opcode_byte);
+		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode_byte);
 		exit(1);
 	}
 

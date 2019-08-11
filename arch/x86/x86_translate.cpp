@@ -494,10 +494,11 @@ arch_x86_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 {
 	struct x86_instr instr;
 
+	// TODO : Is INTEL_SYNTAX needed during translation? If not, less opcodes would need to be checked for below.
 	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0)
 		return -1;
 #if 0 // Temporary: just to see if we can run the jitted function
-	switch (instr.type) {
+	switch (instr.opcode) {
 	case X86_OPC_AAA:         BAD;
 	case X86_OPC_AAD:         BAD;
 	case X86_OPC_AAM:         BAD;

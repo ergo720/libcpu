@@ -8,21 +8,41 @@
 #include "x86_isa.h"
 #include "x86_decode.h"
 
-/*
- * First byte of an element in 'decode_table_one' is the instruction type.
- */
-#define X86_INSTR_OPC_MASK	0xFF // Note : When opcode count surpasses 8 bits, update this mask AND x86_instr_flags!
+// Macro's to select either side of a tuple expressed as (left:right)
+#define TUPLE_LEFT(L_R) (true?L_R) 
+#define TUPLE_RIGHT(L_R) (false?L_R)
 
-/* Readability markers. Only X86_OPC_DIFF_SYNTAX is checked during decoding! */
-#define X86_OPC_PREFIX      0 // prefix bytes, fetched in arch_x86_decode_instr()
-#define X86_OPC_UNDEFINED   X86_OPC_ILLEGAL	// non-existent instruction - NO flags allowed!
-#define X86_OPC_DIFF_SYNTAX 0 // instr has different syntax between intel and att
+// Bitfield extraction macro's
+#define GET_SHIFT(TUPLE) TUPLE_LEFT(TUPLE) 
+#define GET_SIZE(TUPLE) TUPLE_RIGHT(TUPLE)
+#define GET_MASK(TUPLE) ((1 << GET_SIZE(TUPLE)) - 1)
+#define GET_FIELD(v, TUPLE) ((v >> GET_SHIFT(TUPLE)) & GET_MASK(TUPLE))
+#define SET_FIELD(TUPLE, VALUE) (((uint64_t)VALUE) << GET_SHIFT(TUPLE)) // No need to mask when all uses stay within bounds (assert this?)
 
-/* Flags steering decoding differences between Intel and AT&T syntaxes - DO NOT mix these with x86_instr_flags! */
-#define DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT 8
-#define DIFF_SYNTAX_USE_INTEL_SHIFT     16
-#define DIFF_SYNTAX_SIZE_OVERRIDE (1 << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT)
-#define DIFF_SYNTAX_USE_INTEL     (1 << DIFF_SYNTAX_USE_INTEL_SHIFT)
+// Offset:Size tuples for bitfields :
+#define X86_OPCODE 0:8 // [0-7] // Note : When opcode count surpasses 8 bits, update this mask AND x86_instr_flags!
+#define X86_DECODE_CLASS 61:2 // [61-62] - classes defined below (X86_DECODE_CLASS_*)
+#define X86_PREFIX_INDEX 58:3 // [58-60] - indexes in prefix_values[]
+#define X86_PREFIX_VALUE 55:3 // [55-57] - writes to prefix_values[]
+#define X86_DECODE_GROUP 57:4 // [57-60] - indexes in decode_tables[]
+#define X86_DIFF_SYNTAX 56:8 // [56-60] - indexes in diff_syntax_opcodes[]
+
+#define X86_DECODE_CLASS_INVALID 0
+#define X86_DECODE_CLASS_PREFIX 1 // prefix bytes, fetched in arch_x86_decode_instr()
+#define X86_DECODE_CLASS_GROUP 2
+#define X86_DECODE_CLASS_DIFF_SYNTAX 3 // instr has different syntax between Intel and AT&T
+
+#define X86_FIELD_DECODE_CLASS(VALUE) SET_FIELD(X86_DECODE_CLASS, VALUE)
+#define X86_FIELD_PREFIX_INDEX(VALUE) SET_FIELD(X86_PREFIX_INDEX, VALUE)
+#define X86_FIELD_PREFIX_VALUE(VALUE) SET_FIELD(X86_PREFIX_VALUE, VALUE)
+#define X86_FIELD_DECODE_GROUP(VALUE) SET_FIELD(X86_DECODE_GROUP, VALUE)
+#define X86_FIELD_DIFF_SYNTAX(VALUE) SET_FIELD(X86_DIFF_SYNTAX, VALUE)
+
+/* Decoding markers checked in arch_x86_decode_instr() */
+#define X86_OPC_UNDEFINED X86_FIELD_DECODE_CLASS(X86_DECODE_CLASS_INVALID) | X86_OPC_ILLEGAL // == 0, non-existent instruction - NO flags allowed!
+#define X86_OPC_PREFIX(INDEX, VALUE) X86_FIELD_DECODE_CLASS(X86_DECODE_CLASS_PREFIX) | X86_FIELD_PREFIX_INDEX(INDEX) | X86_FIELD_PREFIX_VALUE(VALUE)
+#define X86_OPC_GROUP(GROUP) X86_FIELD_DECODE_CLASS(X86_DECODE_CLASS_GROUP) | X86_FIELD_DECODE_GROUP(GROUP + 1) // Groups must be moved 1 step aside, since decode_tables[2] = grp1_decode_table, etc.
+#define X86_OPC_DIFF_SYNTAX(INDEX) X86_FIELD_DECODE_CLASS(X86_DECODE_CLASS_DIFF_SYNTAX) | X86_FIELD_DIFF_SYNTAX(INDEX)
 
 /* Shorthand for common conditional instruction flags */
 #define Jb (ADDRMOD_REL | WIDTH_BYTE)
@@ -46,7 +66,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x0C]*/	X86_OPC_OR | ADDRMOD_IMM_ACC | WIDTH_BYTE,
 	/*[0x0D]*/	X86_OPC_OR | ADDRMOD_IMM_ACC | WIDTH_DWORD,
 	/*[0x0E]*/	X86_OPC_PUSH | ADDRMOD_SEG2_REG /* CS */ | WIDTH_DWORD,
-	/*[0x0F]*/	X86_OPC_PREFIX /* TWO BYTE OPCODE */,
+	/*[0x0F]*/	X86_OPC_PREFIX(IS_TWO_BYTE_INSTR, 1),
 	/*[0x10]*/	X86_OPC_ADC | ADDRMOD_REG_RM | WIDTH_BYTE,
 	/*[0x11]*/	X86_OPC_ADC | ADDRMOD_REG_RM | WIDTH_DWORD,
 	/*[0x12]*/	X86_OPC_ADC | ADDRMOD_RM_REG | WIDTH_BYTE,
@@ -69,7 +89,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x23]*/	X86_OPC_AND | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0x24]*/	X86_OPC_AND | ADDRMOD_IMM_ACC | WIDTH_BYTE,
 	/*[0x25]*/	X86_OPC_AND | ADDRMOD_IMM_ACC | WIDTH_DWORD,
-	/*[0x26]*/	X86_OPC_PREFIX /* ES_OVERRIDE */,
+	/*[0x26]*/	X86_OPC_PREFIX(SEG_OVERRIDE, ES_OVERRIDE),
 	/*[0x27]*/	X86_OPC_DAA | ADDRMOD_IMPLIED,
 	/*[0x28]*/	X86_OPC_SUB | ADDRMOD_REG_RM | WIDTH_BYTE,
 	/*[0x29]*/	X86_OPC_SUB | ADDRMOD_REG_RM | WIDTH_DWORD,
@@ -77,7 +97,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x2B]*/	X86_OPC_SUB | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0x2C]*/	X86_OPC_SUB | ADDRMOD_IMM_ACC | WIDTH_BYTE,
 	/*[0x2D]*/	X86_OPC_SUB | ADDRMOD_IMM_ACC | WIDTH_DWORD,
-	/*[0x2E]*/	X86_OPC_PREFIX /* CS_OVERRIDE */,
+	/*[0x2E]*/	X86_OPC_PREFIX(SEG_OVERRIDE, CS_OVERRIDE),
 	/*[0x2F]*/	X86_OPC_DAS | ADDRMOD_IMPLIED,
 	/*[0x30]*/	X86_OPC_XOR | ADDRMOD_REG_RM | WIDTH_BYTE,
 	/*[0x31]*/	X86_OPC_XOR | ADDRMOD_REG_RM | WIDTH_DWORD,
@@ -85,7 +105,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x33]*/	X86_OPC_XOR | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0x34]*/	X86_OPC_XOR | ADDRMOD_IMM_ACC | WIDTH_BYTE,
 	/*[0x35]*/	X86_OPC_XOR | ADDRMOD_IMM_ACC | WIDTH_DWORD,
-	/*[0x36]*/	X86_OPC_PREFIX /* SS_OVERRIDE */,
+	/*[0x36]*/	X86_OPC_PREFIX(SEG_OVERRIDE, SS_OVERRIDE),
 	/*[0x37]*/	X86_OPC_AAA | ADDRMOD_IMPLIED,
 	/*[0x38]*/	X86_OPC_CMP | ADDRMOD_REG_RM | WIDTH_BYTE,
 	/*[0x39]*/	X86_OPC_CMP | ADDRMOD_REG_RM | WIDTH_DWORD,
@@ -93,7 +113,7 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x3B]*/	X86_OPC_CMP | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0x3C]*/	X86_OPC_CMP | ADDRMOD_IMM_ACC | WIDTH_BYTE,
 	/*[0x3D]*/	X86_OPC_CMP | ADDRMOD_IMM_ACC | WIDTH_DWORD,
-	/*[0x3E]*/	X86_OPC_PREFIX /* DS_OVERRIDE */,
+	/*[0x3E]*/	X86_OPC_PREFIX(SEG_OVERRIDE, DS_OVERRIDE),
 	/*[0x3F]*/	X86_OPC_AAS | ADDRMOD_IMPLIED,
 	/*[0x40]*/	X86_OPC_INC | ADDRMOD_REG | WIDTH_DWORD,
 	/*[0x41]*/	X86_OPC_INC | ADDRMOD_REG | WIDTH_DWORD,
@@ -129,12 +149,12 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x5F]*/	X86_OPC_POP | ADDRMOD_REG /* DI */  | WIDTH_DWORD,
 	/*[0x60]*/	X86_OPC_PUSHA | ADDRMOD_IMPLIED | WIDTH_DWORD,
 	/*[0x61]*/	X86_OPC_POPA | ADDRMOD_IMPLIED | WIDTH_DWORD,
-	/*[0x62]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_RM_REG,
+	/*[0x62]*/	X86_OPC_DIFF_SYNTAX(0) | ADDRMOD_RM_REG,
 	/*[0x63]*/	X86_OPC_ARPL | ADDRMOD_REG_RM | WIDTH_WORD,
-	/*[0x64]*/	X86_OPC_PREFIX /* FS_OVERRIDE */,
-	/*[0x65]*/	X86_OPC_PREFIX /* GS_OVERRIDE */,
-	/*[0x66]*/	X86_OPC_PREFIX /* OPERAND_SIZE_OVERRIDE */,
-	/*[0x67]*/	X86_OPC_PREFIX /* ADDRESS_SIZE_OVERRIDE */,
+	/*[0x64]*/	X86_OPC_PREFIX(SEG_OVERRIDE, FS_OVERRIDE),
+	/*[0x65]*/	X86_OPC_PREFIX(SEG_OVERRIDE, GS_OVERRIDE),
+	/*[0x66]*/	X86_OPC_PREFIX(OPERAND_SIZE_OVERRIDE, 1),
+	/*[0x67]*/	X86_OPC_PREFIX(ADDRESS_SIZE_OVERRIDE, 1),
 	/*[0x68]*/	X86_OPC_PUSH | ADDRMOD_IMM | WIDTH_DWORD,
 	/*[0x69]*/	X86_OPC_IMUL | ADDRMOD_RM_IMM_REG | WIDTH_DWORD,
 	/*[0x6A]*/	X86_OPC_PUSH | ADDRMOD_IMM | WIDTH_BYTE,
@@ -159,10 +179,10 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x7D]*/	X86_OPC_JGE | Jb,
 	/*[0x7E]*/	X86_OPC_JLE | Jb,
 	/*[0x7F]*/	X86_OPC_JG  | Jb,
-	/*[0x80]*/	GROUP_1 | ADDRMOD_IMM8_RM | WIDTH_BYTE,
-	/*[0x81]*/	GROUP_1 | ADDRMOD_IMM_RM | WIDTH_DWORD,
-	/*[0x82]*/	GROUP_1 | ADDRMOD_IMM8_RM | WIDTH_BYTE,
-	/*[0x83]*/	GROUP_1 | ADDRMOD_IMM8_RM | WIDTH_DWORD,
+	/*[0x80]*/	X86_OPC_GROUP(1) | ADDRMOD_IMM8_RM | WIDTH_BYTE,
+	/*[0x81]*/	X86_OPC_GROUP(1) | ADDRMOD_IMM_RM | WIDTH_DWORD,
+	/*[0x82]*/	X86_OPC_GROUP(1) | ADDRMOD_IMM8_RM | WIDTH_BYTE,
+	/*[0x83]*/	X86_OPC_GROUP(1) | ADDRMOD_IMM8_RM | WIDTH_DWORD,
 	/*[0x84]*/	X86_OPC_TEST | ADDRMOD_REG_RM | WIDTH_BYTE,
 	/*[0x85]*/	X86_OPC_TEST | ADDRMOD_REG_RM | WIDTH_DWORD,
 	/*[0x86]*/	X86_OPC_XCHG | ADDRMOD_REG_RM | WIDTH_BYTE,
@@ -183,9 +203,9 @@ static const uint64_t decode_table_one[256] = {
 	/*[0x95]*/	X86_OPC_XCHG | ADDRMOD_ACC_REG | WIDTH_DWORD,
 	/*[0x96]*/	X86_OPC_XCHG | ADDRMOD_ACC_REG | WIDTH_DWORD,
 	/*[0x97]*/	X86_OPC_XCHG | ADDRMOD_ACC_REG | WIDTH_DWORD,
-	/*[0x98]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_IMPLIED,
-	/*[0x99]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_IMPLIED,
-	/*[0x9A]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_FAR_PTR | WIDTH_DWORD,
+	/*[0x98]*/	X86_OPC_DIFF_SYNTAX(1) | ADDRMOD_IMPLIED,
+	/*[0x99]*/	X86_OPC_DIFF_SYNTAX(2) | ADDRMOD_IMPLIED,
+	/*[0x9A]*/	X86_OPC_DIFF_SYNTAX(3) | ADDRMOD_FAR_PTR | WIDTH_DWORD,
 	/*[0x9B]*/	X86_OPC_UNDEFINED, // fpu
 	/*[0x9C]*/	X86_OPC_PUSHF | ADDRMOD_IMPLIED,
 	/*[0x9D]*/	X86_OPC_POPF | ADDRMOD_IMPLIED,
@@ -223,8 +243,8 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xBD]*/	X86_OPC_MOV | ADDRMOD_IMM_REG | WIDTH_DWORD,
 	/*[0xBE]*/	X86_OPC_MOV | ADDRMOD_IMM_REG | WIDTH_DWORD,
 	/*[0xBF]*/	X86_OPC_MOV | ADDRMOD_IMM_REG | WIDTH_DWORD,
-	/*[0xC0]*/	GROUP_2 | ADDRMOD_IMM8_RM | WIDTH_BYTE,
-	/*[0xC1]*/	GROUP_2 | ADDRMOD_IMM8_RM | WIDTH_DWORD,
+	/*[0xC0]*/	X86_OPC_GROUP(2) | ADDRMOD_IMM8_RM | WIDTH_BYTE,
+	/*[0xC1]*/	X86_OPC_GROUP(2) | ADDRMOD_IMM8_RM | WIDTH_DWORD,
 	/*[0xC2]*/	X86_OPC_RET | ADDRMOD_IMM | WIDTH_WORD,
 	/*[0xC3]*/	X86_OPC_RET | ADDRMOD_IMPLIED,
 	/*[0xC4]*/	X86_OPC_LES | ADDRMOD_RM_REG | WIDTH_DWORD,
@@ -233,16 +253,16 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xC7]*/	X86_OPC_MOV | ADDRMOD_IMM_RM | WIDTH_DWORD,
 	/*[0xC8]*/	X86_OPC_ENTER | ADDRMOD_IMM8_IMM16 | WIDTH_WORD,
 	/*[0xC9]*/	X86_OPC_LEAVE | ADDRMOD_IMPLIED,
-	/*[0xCA]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_IMM | WIDTH_WORD,
-	/*[0xCB]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_IMPLIED,
+	/*[0xCA]*/	X86_OPC_DIFF_SYNTAX(4) | ADDRMOD_IMM | WIDTH_WORD,
+	/*[0xCB]*/	X86_OPC_DIFF_SYNTAX(5) | ADDRMOD_IMPLIED,
 	/*[0xCC]*/	X86_OPC_INT3 | ADDRMOD_IMPLIED,
 	/*[0xCD]*/	X86_OPC_INT | ADDRMOD_IMM | WIDTH_BYTE,
 	/*[0xCE]*/	X86_OPC_INTO | ADDRMOD_IMPLIED,
 	/*[0xCF]*/	X86_OPC_IRET | ADDRMOD_IMPLIED,
-	/*[0xD0]*/	GROUP_2 | ADDRMOD_RM | WIDTH_BYTE,
-	/*[0xD1]*/	GROUP_2 | ADDRMOD_RM | WIDTH_DWORD,
-	/*[0xD2]*/	GROUP_2 | ADDRMOD_RM | WIDTH_BYTE,
-	/*[0xD3]*/	GROUP_2 | ADDRMOD_RM | WIDTH_DWORD,
+	/*[0xD0]*/	X86_OPC_GROUP(2) | ADDRMOD_RM | WIDTH_BYTE,
+	/*[0xD1]*/	X86_OPC_GROUP(2) | ADDRMOD_RM | WIDTH_DWORD,
+	/*[0xD2]*/	X86_OPC_GROUP(2) | ADDRMOD_RM | WIDTH_BYTE,
+	/*[0xD3]*/	X86_OPC_GROUP(2) | ADDRMOD_RM | WIDTH_DWORD,
 	/*[0xD4]*/	X86_OPC_AAM | ADDRMOD_IMM | WIDTH_BYTE,
 	/*[0xD5]*/	X86_OPC_AAD | ADDRMOD_IMM | WIDTH_BYTE,
 	/*[0xD6]*/	X86_OPC_UNDEFINED, // SALC undocumented instr, should add this?
@@ -265,33 +285,33 @@ static const uint64_t decode_table_one[256] = {
 	/*[0xE7]*/	X86_OPC_OUT | ADDRMOD_IMM8 | WIDTH_DWORD,
 	/*[0xE8]*/	X86_OPC_CALL | Jv,
 	/*[0xE9]*/	X86_OPC_JMP  | Jv,
-	/*[0xEA]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_FAR_PTR | WIDTH_DWORD,
+	/*[0xEA]*/	X86_OPC_DIFF_SYNTAX(6) | ADDRMOD_FAR_PTR | WIDTH_DWORD,
 	/*[0xEB]*/	X86_OPC_JMP  | Jb,
 	/*[0xEC]*/	X86_OPC_IN | ADDRMOD_IMPLIED | WIDTH_BYTE,
 	/*[0xED]*/	X86_OPC_IN | ADDRMOD_IMPLIED | WIDTH_DWORD,
 	/*[0xEE]*/	X86_OPC_OUT | ADDRMOD_IMPLIED | WIDTH_BYTE,
 	/*[0xEF]*/	X86_OPC_OUT | ADDRMOD_IMPLIED | WIDTH_DWORD,
-	/*[0xF0]*/	X86_OPC_PREFIX /* LOCK */,
+	/*[0xF0]*/	X86_OPC_PREFIX(LOCK_PREFIX, 1),
 	/*[0xF1]*/	X86_OPC_UNDEFINED, // INT1 undocumented instr, should add this?
-	/*[0xF2]*/	X86_OPC_PREFIX /* REPNZ_PREFIX */,
-	/*[0xF3]*/	X86_OPC_PREFIX /* REPZ_PREFIX */,
+	/*[0xF2]*/	X86_OPC_PREFIX(REP_OVERRIDE, REPNZ_PREFIX), /* REPNE/REPNZ */
+	/*[0xF3]*/	X86_OPC_PREFIX(REP_OVERRIDE, REPZ_PREFIX), /* REP/REPE/REPZ */
 	/*[0xF4]*/	X86_OPC_HLT | ADDRMOD_IMPLIED,
 	/*[0xF5]*/	X86_OPC_CMC | ADDRMOD_IMPLIED,
-	/*[0xF6]*/	GROUP_3 | ADDRMOD_RM | WIDTH_BYTE,
-	/*[0xF7]*/	GROUP_3 | ADDRMOD_RM | WIDTH_DWORD,
+	/*[0xF6]*/	X86_OPC_GROUP(3) | ADDRMOD_RM | WIDTH_BYTE,
+	/*[0xF7]*/	X86_OPC_GROUP(3) | ADDRMOD_RM | WIDTH_DWORD,
 	/*[0xF8]*/	X86_OPC_CLC | ADDRMOD_IMPLIED,
 	/*[0xF9]*/	X86_OPC_STC | ADDRMOD_IMPLIED,
 	/*[0xFA]*/	X86_OPC_CLI | ADDRMOD_IMPLIED,
 	/*[0xFB]*/	X86_OPC_STI | ADDRMOD_IMPLIED,
 	/*[0xFC]*/	X86_OPC_CLD | ADDRMOD_IMPLIED,
 	/*[0xFD]*/	X86_OPC_STD | ADDRMOD_IMPLIED,
-	/*[0xFE]*/	GROUP_4 | ADDRMOD_RM | WIDTH_BYTE,
-	/*[0xFF]*/	GROUP_5 | ADDRMOD_RM | WIDTH_DWORD,
+	/*[0xFE]*/	X86_OPC_GROUP(4) | ADDRMOD_RM | WIDTH_BYTE,
+	/*[0xFF]*/	X86_OPC_GROUP(5) | ADDRMOD_RM | WIDTH_DWORD,
 };
 
 static const uint64_t decode_table_two[256] = {
-	/*[0x00]*/	GROUP_6 | ADDRMOD_RM | WIDTH_WORD,
-	/*[0x01]*/	GROUP_7 | ADDRMOD_RM | WIDTH_DWORD,
+	/*[0x00]*/	X86_OPC_GROUP(6) | ADDRMOD_RM | WIDTH_WORD,
+	/*[0x01]*/	X86_OPC_GROUP(7) | ADDRMOD_RM | WIDTH_DWORD,
 	/*[0x02]*/	X86_OPC_LAR | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0x03]*/	X86_OPC_LSL | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0x04]*/	X86_OPC_UNDEFINED,
@@ -472,16 +492,16 @@ static const uint64_t decode_table_two[256] = {
 	/*[0xB3]*/	X86_OPC_BTR | ADDRMOD_REG_RM | WIDTH_DWORD,
 	/*[0xB4]*/	X86_OPC_LFS | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0xB5]*/	X86_OPC_LGS | ADDRMOD_RM_REG | WIDTH_DWORD,
-	/*[0xB6]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_RM_REG | WIDTH_DWORD,
-	/*[0xB7]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_RM_REG | WIDTH_DWORD,
+	/*[0xB6]*/	X86_OPC_DIFF_SYNTAX(7) | ADDRMOD_RM_REG | WIDTH_DWORD,
+	/*[0xB7]*/	X86_OPC_DIFF_SYNTAX(8) | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0xB8]*/	X86_OPC_UNDEFINED,
 	/*[0xB9]*/	X86_OPC_UD1 | ADDRMOD_IMPLIED,
-	/*[0xBA]*/	GROUP_8 | ADDRMOD_IMM8_RM | WIDTH_DWORD,
+	/*[0xBA]*/	X86_OPC_GROUP(8) | ADDRMOD_IMM8_RM | WIDTH_DWORD,
 	/*[0xBB]*/	X86_OPC_BTC | ADDRMOD_REG_RM | WIDTH_DWORD,
 	/*[0xBC]*/	X86_OPC_BSF | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0xBD]*/	X86_OPC_BSR | ADDRMOD_RM_REG | WIDTH_DWORD,
-	/*[0xBE]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_RM_REG | WIDTH_DWORD,
-	/*[0xBF]*/	X86_OPC_DIFF_SYNTAX | ADDRMOD_RM_REG | WIDTH_DWORD,
+	/*[0xBE]*/	X86_OPC_DIFF_SYNTAX(9) | ADDRMOD_RM_REG | WIDTH_DWORD,
+	/*[0xBF]*/	X86_OPC_DIFF_SYNTAX(10) | ADDRMOD_RM_REG | WIDTH_DWORD,
 	/*[0xC0]*/	X86_OPC_XADD | ADDRMOD_REG_RM | WIDTH_BYTE,
 	/*[0xC1]*/	X86_OPC_XADD | ADDRMOD_REG_RM | WIDTH_DWORD,
 	/*[0xC2]*/	X86_OPC_UNDEFINED, // sse
@@ -489,7 +509,7 @@ static const uint64_t decode_table_two[256] = {
 	/*[0xC4]*/	X86_OPC_UNDEFINED, // sse
 	/*[0xC5]*/	X86_OPC_UNDEFINED, // sse
 	/*[0xC6]*/	X86_OPC_UNDEFINED, // sse
-	/*[0xC7]*/	GROUP_9 | ADDRMOD_RM | WIDTH_QWORD,
+	/*[0xC7]*/	X86_OPC_GROUP(9) | ADDRMOD_RM | WIDTH_QWORD,
 	/*[0xC8]*/	X86_OPC_BSWAP | ADDRMOD_REG | WIDTH_DWORD,
 	/*[0xC9]*/	X86_OPC_BSWAP | ADDRMOD_REG | WIDTH_DWORD,
 	/*[0xCA]*/	X86_OPC_BSWAP | ADDRMOD_REG | WIDTH_DWORD,
@@ -548,7 +568,7 @@ static const uint64_t decode_table_two[256] = {
 	/*[0xFF]*/	X86_OPC_UNDEFINED,
 };
 
-static const uint32_t grp1_decode_table[8] = {
+static const uint64_t grp1_decode_table[8] = { // X86_OPC_GROUP(1)
 	/*[0x00]*/	X86_OPC_ADD,
 	/*[0x01]*/	X86_OPC_OR,
 	/*[0x02]*/	X86_OPC_ADC,
@@ -559,7 +579,7 @@ static const uint32_t grp1_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_CMP,
 };
 
-static const uint32_t grp2_decode_table[8] = {
+static const uint64_t grp2_decode_table[8] = { // X86_OPC_GROUP(2)
 	/*[0x00]*/	X86_OPC_ROL,
 	/*[0x01]*/	X86_OPC_ROR,
 	/*[0x02]*/	X86_OPC_RCL,
@@ -570,7 +590,7 @@ static const uint32_t grp2_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_SAR,
 };
 
-static const uint32_t grp3_decode_table[8] = {
+static const uint64_t grp3_decode_table[8] = { // X86_OPC_GROUP(3)
 	/*[0x00]*/	X86_OPC_TEST | ADDRMOD_IMM_RM,
 	/*[0x01]*/	X86_OPC_UNDEFINED,
 	/*[0x02]*/	X86_OPC_NOT,
@@ -581,7 +601,7 @@ static const uint32_t grp3_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_IDIV,
 };
 
-static const uint32_t grp4_decode_table[8] = {
+static const uint64_t grp4_decode_table[8] = { // X86_OPC_GROUP(4)
 	/*[0x00]*/	X86_OPC_INC,
 	/*[0x01]*/	X86_OPC_DEC,
 	/*[0x02]*/	X86_OPC_UNDEFINED,
@@ -592,18 +612,18 @@ static const uint32_t grp4_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
-static const uint32_t grp5_decode_table[8] = {
+static const uint64_t grp5_decode_table[8] = { // X86_OPC_GROUP(5)
 	/*[0x00]*/	X86_OPC_INC,
 	/*[0x01]*/	X86_OPC_DEC,
 	/*[0x02]*/	X86_OPC_CALL,
-	/*[0x03]*/	X86_OPC_DIFF_SYNTAX,
+	/*[0x03]*/	X86_OPC_DIFF_SYNTAX(11),
 	/*[0x04]*/	X86_OPC_JMP,
-	/*[0x05]*/	X86_OPC_DIFF_SYNTAX,
+	/*[0x05]*/	X86_OPC_DIFF_SYNTAX(12),
 	/*[0x06]*/	X86_OPC_PUSH,
 	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
-static const uint32_t grp6_decode_table[8] = {
+static const uint64_t grp6_decode_table[8] = { // X86_OPC_GROUP(6)
 	/*[0x00]*/	X86_OPC_SLDT,
 	/*[0x01]*/	X86_OPC_STR,
 	/*[0x02]*/	X86_OPC_LLDT,
@@ -614,18 +634,18 @@ static const uint32_t grp6_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
-static const uint32_t grp7_decode_table[8] = {
-	/*[0x00]*/	X86_OPC_DIFF_SYNTAX,
-	/*[0x01]*/	X86_OPC_DIFF_SYNTAX,
-	/*[0x02]*/	X86_OPC_DIFF_SYNTAX,
-	/*[0x03]*/	X86_OPC_DIFF_SYNTAX,
+static const uint64_t grp7_decode_table[8] = { // X86_OPC_GROUP(7)
+	/*[0x00]*/	X86_OPC_DIFF_SYNTAX(13),
+	/*[0x01]*/	X86_OPC_DIFF_SYNTAX(14),
+	/*[0x02]*/	X86_OPC_DIFF_SYNTAX(15),
+	/*[0x03]*/	X86_OPC_DIFF_SYNTAX(16),
 	/*[0x04]*/	X86_OPC_SMSW | WIDTH_WORD,
 	/*[0x05]*/	X86_OPC_UNDEFINED,
 	/*[0x06]*/	X86_OPC_LMSW | WIDTH_WORD,
 	/*[0x07]*/	X86_OPC_INVLPG | WIDTH_BYTE,
 };
 
-static const uint32_t grp8_decode_table[8] = {
+static const uint64_t grp8_decode_table[8] = { // X86_OPC_GROUP(8)
 	/*[0x00]*/	X86_OPC_UNDEFINED,
 	/*[0x01]*/	X86_OPC_UNDEFINED,
 	/*[0x02]*/	X86_OPC_UNDEFINED,
@@ -636,7 +656,7 @@ static const uint32_t grp8_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_BTC,
 };
 
-static const uint32_t grp9_decode_table[8] = {
+static const uint64_t grp9_decode_table[8] = { // X86_OPC_GROUP(9)
 	/*[0x00]*/	X86_OPC_UNDEFINED,
 	/*[0x01]*/	X86_OPC_CMPXCHG8B,
 	/*[0x02]*/	X86_OPC_UNDEFINED,
@@ -647,7 +667,7 @@ static const uint32_t grp9_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
-static const uint64_t[][] decode_tables = {
+static const uint64_t *decode_tables[11] = {
 	decode_table_one,
 	decode_table_two,
 	grp1_decode_table,
@@ -661,31 +681,31 @@ static const uint64_t[][] decode_tables = {
 	grp9_decode_table,
 };
 
-// offset 0 = standard, 1 = size_override, 2 = intel syntax, 3 = intel syntax AND size override 
-static const uint64_t diff_syntax_flags_0x62 = { WIDTH_DWORD, WIDTH_WORD, WIDTH_QWORD, WIDTH_DWORD };
+// offset 0 = standard, 1 = size_override, 2 = Intel syntax (instead of AT&T), 3 = Intel syntax AND size override 
+static const uint64_t diff_syntax_flags_0x62[4] = { WIDTH_DWORD, WIDTH_WORD, WIDTH_QWORD, WIDTH_DWORD };
 
-static const arch_x86_opcode diff_syntax_opcodes[][4] = { // Opcodes for all elements marked with X86_OPC_DIFF_SYNTAX
+static const arch_x86_opcode diff_syntax_opcodes[17][4] = { // Opcodes for all elements marked with X86_OPC_DIFF_SYNTAX
 	// decode_table_one :
-	/*[0x62]*/	{ X86_OPC_BOUND, X86_OPC_BOUND, X86_OPC_BOUND, X86_OPC_BOUND }, // marked X86_OPC_DIFF_SYNTAX for diff_syntax_flags_0x62 (all use X86_OPC_BOUND)
-	/*[0x98]*/	{ X86_OPC_CWTL, X86_OPC_CBTV, X86_OPC_CWDE, X86_OPC_CBW },
-	/*[0x99]*/	{ X86_OPC_CLTD, X86_OPC_CWTD, X86_OPC_CDQ, X86_OPC_CWD },
-	/*[0x9A]*/	{ X86_OPC_LCALL, X86_OPC_LCALL, X86_OPC_CALL, X86_OPC_CALL }, // Identical to 0x03
-	/*[0xCA]*/	{ X86_OPC_LRET, X86_OPC_LRET, X86_OPC_RETF, X86_OPC_RETF }, // Identical to 0xCB \_
-	/*[0xCB]*/	{ X86_OPC_LRET, X86_OPC_LRET, X86_OPC_RETF, X86_OPC_RETF }, // Identical to 0xCA /
-	/*[0xEA]*/	{ X86_OPC_LJMP, X86_OPC_LJMP, X86_OPC_JMP, X86_OPC_JMP }, // Identical to 0x05
+	/*[ 0=0x62]*/	{ X86_OPC_BOUND, X86_OPC_BOUND, X86_OPC_BOUND, X86_OPC_BOUND }, // marked X86_OPC_DIFF_SYNTAX for diff_syntax_flags_0x62 (all use X86_OPC_BOUND)
+	/*[ 1=0x98]*/	{ X86_OPC_CWTL, X86_OPC_CBTV, X86_OPC_CWDE, X86_OPC_CBW },
+	/*[ 2=0x99]*/	{ X86_OPC_CLTD, X86_OPC_CWTD, X86_OPC_CDQ, X86_OPC_CWD },
+	/*[ 3=0x9A]*/	{ X86_OPC_LCALL, X86_OPC_LCALL, X86_OPC_CALL, X86_OPC_CALL }, // Identical to 0x03
+	/*[ 4=0xCA]*/	{ X86_OPC_LRET, X86_OPC_LRET, X86_OPC_RETF, X86_OPC_RETF }, // Identical to 0xCB \_
+	/*[ 5=0xCB]*/	{ X86_OPC_LRET, X86_OPC_LRET, X86_OPC_RETF, X86_OPC_RETF }, // Identical to 0xCA /
+	/*[ 6=0xEA]*/	{ X86_OPC_LJMP, X86_OPC_LJMP, X86_OPC_JMP, X86_OPC_JMP }, // Identical to 0x05
 	// decode_table_two :
-	/*[0xB6]*/	{ X86_OPC_MOVZXB, X86_OPC_MOVZXB, X86_OPC_MOVZX, X86_OPC_MOVZX }, // Identical to 0xB7 \_
-	/*[0xB7]*/	{ X86_OPC_MOVZXW, X86_OPC_MOVZXW, X86_OPC_MOVZX, X86_OPC_MOVZX }, // Identical to 0xB6 /
-	/*[0xBE]*/	{ X86_OPC_MOVSXB, X86_OPC_MOVSXB, X86_OPC_MOVSX, X86_OPC_MOVSX }, // Identical to 0xBF \_
-	/*[0xBF]*/	{ X86_OPC_MOVSXW, X86_OPC_MOVSXW, X86_OPC_MOVSX, X86_OPC_MOVSX }, // Identical to 0xBE /
+	/*[ 7=0xB6]*/	{ X86_OPC_MOVZXB, X86_OPC_MOVZXB, X86_OPC_MOVZX, X86_OPC_MOVZX }, // Identical to 0xB7 \_
+	/*[ 8=0xB7]*/	{ X86_OPC_MOVZXW, X86_OPC_MOVZXW, X86_OPC_MOVZX, X86_OPC_MOVZX }, // Identical to 0xB6 /
+	/*[ 9=0xBE]*/	{ X86_OPC_MOVSXB, X86_OPC_MOVSXB, X86_OPC_MOVSX, X86_OPC_MOVSX }, // Identical to 0xBF \_
+	/*[10=0xBF]*/	{ X86_OPC_MOVSXW, X86_OPC_MOVSXW, X86_OPC_MOVSX, X86_OPC_MOVSX }, // Identical to 0xBE /
 	// grp5_decode_table :
-	/*[0x03]*/	{ X86_OPC_LCALL, X86_OPC_LCALL, X86_OPC_CALL, X86_OPC_CALL }, // Identical to 0x9A
-	/*[0x05]*/	{ X86_OPC_LJMP, X86_OPC_LJMP, X86_OPC_JMP, X86_OPC_JMP }, // Identical to 0xEA
+	/*[11=0x03]*/	{ X86_OPC_LCALL, X86_OPC_LCALL, X86_OPC_CALL, X86_OPC_CALL }, // Identical to 0x9A
+	/*[12=0x05]*/	{ X86_OPC_LJMP, X86_OPC_LJMP, X86_OPC_JMP, X86_OPC_JMP }, // Identical to 0xEA
 	// grp7_decode_table :
-	/*[0x00]*/	{ X86_OPC_SGDTL, X86_OPC_SGDTW, X86_OPC_SGDTD, X86_OPC_SGDTW },
-	/*[0x01]*/	{ X86_OPC_SIDTL, X86_OPC_SIDTW, X86_OPC_SIDTD, X86_OPC_SIDTW },
-	/*[0x02]*/	{ X86_OPC_LGDTL, X86_OPC_LGDTW, X86_OPC_LGDTD, X86_OPC_LGDTW },
-	/*[0x03]*/	{ X86_OPC_LIDTL, X86_OPC_LIDTW, X86_OPC_LIDTD, X86_OPC_LIDTW },
+	/*[13=0x00]*/	{ X86_OPC_SGDTL, X86_OPC_SGDTW, X86_OPC_SGDTD, X86_OPC_SGDTW },
+	/*[14=0x01]*/	{ X86_OPC_SIDTL, X86_OPC_SIDTW, X86_OPC_SIDTD, X86_OPC_SIDTW },
+	/*[15=0x02]*/	{ X86_OPC_LGDTL, X86_OPC_LGDTW, X86_OPC_LGDTD, X86_OPC_LGDTW },
+	/*[16=0x03]*/	{ X86_OPC_LIDTL, X86_OPC_LIDTW, X86_OPC_LIDTD, X86_OPC_LIDTW },
 };
 
 static void
@@ -1229,30 +1249,6 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 	}
 }
 
-// Macro's to select either side of a tuple expressed as (left:right)
-#define TUPLE_LEFT(L_R) (true?L_R) 
-#define TUPLE_RIGHT(L_R) (false?L_R)
-
-// Bitfield extraction macro's
-#define GET_SHIFT(TUPLE) TUPLE_LEFT(TUPLE) 
-#define GET_SIZE(TUPLE) TUPLE_RIGHT(TUPLE)
-#define GET_MASK(TUPLE) ((1 << GET_SIZE(TUPLE)) - 1)
-#define GET_FIELD(v, TUPLE) ((v >> GET_SHIFT(TUPLE)) & GET_MASK(TUPLE))
-
-// Offset:Size tuples for bitfields :
-#define X86_OPCODE 0:8
-#define X86_DECODE_CLASS 61:2
-#define X86_PREFIX_INDEX 58:3
-#define X86_PREFIX_VALUE 33:3
-#define X86_DECODE_GROUP 24:4
-
-#define X86_DECODE_CLASS_INVALID 0
-#define X86_DECODE_CLASS_PREFIX 1
-#define X86_DECODE_CLASS_GROUP 2
-#define X86_DECODE_CLASS_DIFF_SYNTAX 3
-
-#define X86_GROUP(x) (x - 1)
-
 int
 arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel)
 {
@@ -1264,58 +1260,66 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	uint8_t bits;
 
 	/* Set default values into the decoded x86 instruction struct */
-	instr->seg_override	= NO_OVERRIDE;
-	instr->rep_prefix	= NO_PREFIX;
-	instr->lock_prefix	= 0;
-	instr->addr_size_override = 0;
-	instr->op_size_override = 0;
-	instr->is_two_byte_instr = 0;
+	*instr = { 0 };
 
 	// Start decoding here, initially using decode_table_one :
 	start_pc = pc;
 	decode_group = 0;
-fetch_byte:
-	instr_byte = RAM[pc++];
-	instr->opcode_byte = instr_byte;
-decode_byte:
-	decode = decode_tables[decode_group][instr_byte];
-	opcode = (arch_x86_opcode)GET_FIELD(decode, X86_OPCODE);
-	if (opcode == 0) {
-		switch (GET_FIELD(decode, X86_DECODE_CLASS)) {
-		case X86_DECODE_CLASS_INVALID:
-			// This handles all occurences of X86_OPC_UNDEFINED :
-			return -1;
-		case X86_DECODE_CLASS_PREFIX:
-			// All prefix bytes set an instruction variable to some value and will fetch and decode another byte :
-			bits = GET_FIELD(decode, X86_PREFIX_INDEX);
-			instr->prefix_values[bits] = GET_FIELD(decode, X86_PREFIX_VALUE);
-			// Recognize prefix byte 0x0F; Run the next byte through decode_table_two :
-			if (instr_byte == 0x0F) // Equivalent to: if (bits == X86_PREFIX_INDEX_IS_TWO_BYTE_INSTR)
-				decode_group = 1; // Use decode_table_two (instr->is_two_byte_instr is already set above via prefix_values[])
-			goto fetch_byte;
-		case X86_DECODE_CLASS_GROUP:
-			// Do group side-steps by repeating a fetch-and-decode using the indicated group and index bits :
-			decode_modrm_fields(instr, RAM[pc++]);
-			decode_group = GET_FIELD(decode, X86_GROUP);
-			instr_byte = instr->reg_opc;
-			goto decode_byte;
-		case X86_DECODE_CLASS_DIFF_SYNTAX:
-			bits = instr->op_size_override | (use_intel << 1); // offset 0 = standard, 1 = size_override, 2 = intel syntax, 3 = intel syntax AND size override 
-			opcode = diff_syntax_opcodes[GET_FIELD(decode, X86_DIFF_SYNTAX)][bits];
-			if (instr_byte == 0x62)
-				instr->flags |= diff_syntax_flags_0x62[bits];
-			break;
+	instr_byte = read_u8(RAM, &pc);
+	while(true) {
+		decode = decode_tables[decode_group][instr_byte];
+		opcode = (arch_x86_opcode)GET_FIELD(decode, X86_OPCODE);
+		if (opcode == 0) {
+			switch (GET_FIELD(decode, X86_DECODE_CLASS)) {
+			case X86_DECODE_CLASS_INVALID:
+				// This handles all occurences of X86_OPC_UNDEFINED :
+				return -1;
+			case X86_DECODE_CLASS_PREFIX: // TODO : Honor maximum number of prefix bytes per prefix group
+				// All prefix bytes set an instruction variable to some value and will fetch and decode another byte :
+				bits = GET_FIELD(decode, X86_PREFIX_INDEX);
+				instr->prefix_values[bits] = GET_FIELD(decode, X86_PREFIX_VALUE);
+				// Recognize prefix byte 0x0F; Run the next byte through decode_table_two :
+				if (instr_byte == 0x0F) // Equivalent to: if (bits == IS_TWO_BYTE_INSTR)
+					decode_group = 1; // Use decode_table_two (instr->is_two_byte_instr is already set above via prefix_values[])
+				instr_byte = read_u8(RAM, &pc);
+				continue; // repeat loop
+			case X86_DECODE_CLASS_GROUP:
+				// Do an extension group side-step, by repeating the decodeing using the indicated group and index :
+				instr->opcode_byte = instr_byte;
+				instr->flags = decode; // Initially, use the flags mentioned together with the group reference (group entries may have deviations)
+				decode_modrm_fields(instr, read_u8(RAM, &pc));
+				decode_group = GET_FIELD(decode, X86_DECODE_GROUP);
+				instr_byte = instr->reg_opc;
+				continue; // repeat loop
+			case X86_DECODE_CLASS_DIFF_SYNTAX:
+				// Calculate diff_syntax_* last dimension index : 0 = standard, 1 = size_override, 2 = Intel syntax, 3 = Intel syntax AND size override 
+				bits = instr->op_size_override | (use_intel << 1);
+				opcode = diff_syntax_opcodes[GET_FIELD(decode, X86_DIFF_SYNTAX)][bits];
+				if (instr_byte == 0x62)
+					instr->flags |= diff_syntax_flags_0x62[bits];
+				break;
+			// No default
+			}
 		}
-		// No default
+		break; // leave loop
 	}
 
-	instr->type = opcode;
-	if (decode_group <= 1) {
+	instr->opcode = opcode;
+	if (decode_group <= 1) { // Did we read from decode_table_one or decode_table_two?
+		instr->opcode_byte = instr_byte;
+		instr->flags = decode; // & ~GET_MASK(X86_OPCODE); // Doesn't seem necessary (opcode bits aren't checked)
 		if (instr->flags & MOD_RM) {
-			decode_modrm_fields(instr, RAM[pc++]);
+			decode_modrm_fields(instr, read_u8(RAM, &pc));
 			decode_modrm_addr_modes(instr);
 		}
-	} else {
+	} else { // Read from grp*_decode_table
+		// Mask away (initially set) width flags, if the group entry also has a width flag :
+		if (decode & WIDTH_MASK)
+			instr->flags &= ~WIDTH_MASK;
+		// Mask away (initially set) addressing mode flags, if the group entry also has address mode flags :
+		if (decode & ADDRMOD_MASK)
+			instr->flags &= ~ADDRMOD_MASK;
+		instr->flags |= decode; // & ~GET_MASK(X86_OPCODE); // Doesn't seem necessary (opcode bits aren't checked)
 		decode_modrm_addr_modes(instr);
 	}
 
@@ -1330,348 +1334,7 @@ decode_byte:
 	}
 
 	if (instr->flags & SIB)
-		decode_sib_byte(instr, RAM[pc++]);
-
-	if (instr->flags & MEM_DISP_MASK)
-		decode_disp(instr, RAM, &pc);
-
-	if (instr->flags & MOFFSET_MASK)
-		decode_moffset(instr, RAM, &pc);
-
-	if (instr->flags & IMM_MASK)
-		decode_imm(instr, RAM, &pc);
-
-	if (instr->flags & REL_MASK)
-		decode_rel(instr, RAM, &pc);
-
-	decode_src_operand(instr);
-
-	decode_dst_operand(instr);
-
-	decode_third_operand(instr);
-
-	instr->nr_bytes = (unsigned long)(pc - start_pc);
-
-	return 0;
-}
-
-int
-arch_x86_decode_instr_old(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel)
-{
-	uint64_t decode;
-	uint8_t opcode;
-	addr_t start_pc;
-
-	start_pc = pc;
-
-	/* Prefixes (X86_OPC_PREFIX) */
-	instr->seg_override	= NO_OVERRIDE;
-	instr->rep_prefix	= NO_PREFIX;
-	instr->addr_size_override = 0;
-	unsigned op_size_override = 0;
-	instr->lock_prefix	= 0;
-	instr->is_two_byte_instr = 0;
-
-	while (true) {
-		switch (opcode = RAM[pc++]) {
-		case 0x26:
-			instr->seg_override	= ES_OVERRIDE;
-			continue;
-		case 0x2E:
-			instr->seg_override	= CS_OVERRIDE;
-			continue;
-		case 0x36:
-			instr->seg_override	= SS_OVERRIDE;
-			continue;
-		case 0x3E:
-			instr->seg_override	= DS_OVERRIDE;
-			continue;
-		case 0x64:
-			instr->seg_override = FS_OVERRIDE;
-			continue;
-		case 0x65:
-			instr->seg_override = GS_OVERRIDE;
-			continue;
-		case 0x66:
-			op_size_override = 1;
-			continue;
-		case 0x67:
-			instr->addr_size_override = 1;
-			continue;
-		case 0xF0:	/* LOCK */
-			instr->lock_prefix = 1;
-			continue;
-		case 0xF2:	/* REPNE/REPNZ */
-			instr->rep_prefix = REPNZ_PREFIX;
-			continue;
-		case 0xF3:	/* REP/REPE/REPZ */
-			instr->rep_prefix = REPZ_PREFIX;
-			continue;
-		// no default
-		}
-
-		break; // done reading prefixes
-	}
-
-	/* Opcode byte */
-	if (opcode == 0x0F) { /* X86_OPC_PREFIX /* /* TWO BYTE OPCODE */
-		opcode = RAM[pc++];
-		decode = decode_table_two[opcode];
-		instr->is_two_byte_instr = 1;
-	}
-	else {
-		decode = decode_table_one[opcode];
-	}
-
-	instr->opcode_byte = opcode;
-	instr->type = decode & X86_INSTR_OPC_MASK;
-	instr->flags = decode & ~X86_INSTR_OPC_MASK;
-
-	// Detect X86_OPC_UNDEFINED cases in decode_table_one and decode_table_two, which are forbidden to have flags :
-	if (instr->flags == 0) /* Unrecognized? */
-		return -1;
-
-	if (op_size_override) {
-		if (instr->flags & WIDTH_DWORD) {
-			instr->flags &= ~WIDTH_DWORD;
-			instr->flags |= WIDTH_WORD;
-		}
-		else if (instr->flags & WIDTH_QWORD) {
-			instr->flags &= ~WIDTH_QWORD;
-			instr->flags |= WIDTH_DWORD;
-		}
-	}
-
-	if (instr->type == 0) { // This handles X86_OPC_DIFF_SYNTAX, X86_OPC_UNDEFINED and all GROUP_*'s :
-		switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->opcode_byte) {
-		// Handle decode_table_one entries marked X86_OPC_DIFF_SYNTAX :
-		case 0x62:
-			instr->type = X86_OPC_BOUND;
-			instr->flags |= WIDTH_DWORD;
-			break;
-		case 0x62 | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_BOUND;
-			instr->flags |= WIDTH_WORD;
-			break;
-		case 0x62 | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_BOUND;
-			instr->flags |= WIDTH_QWORD;
-			break;
-		case 0x62 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_BOUND;
-			instr->flags |= WIDTH_DWORD;
-			break;
-		case 0x98:
-			instr->type = X86_OPC_CWTL;
-			break;
-		case 0x98 | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_CBTV;
-			break;
-		case 0x98 | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_CWDE;
-			break;
-		case 0x98 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_CBW;
-			break;
-		case 0x99:
-			instr->type = X86_OPC_CLTD;
-			break;
-		case 0x99 | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_CWTD;
-			break;
-		case 0x99 | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_CDQ;
-			break;
-		case 0x99 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_CWD;
-			break;
-		case 0x9A:
-		case 0x9A | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_LCALL;
-			break;
-		case 0x9A | DIFF_SYNTAX_USE_INTEL:
-		case 0x9A | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_CALL;
-			break;
-		case 0xCA:
-		case 0xCA | DIFF_SYNTAX_SIZE_OVERRIDE:
-		case 0xCB:
-		case 0xCB | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_LRET;
-			break;
-		case 0xCA | DIFF_SYNTAX_USE_INTEL:
-		case 0xCA | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-		case 0xCB | DIFF_SYNTAX_USE_INTEL:
-		case 0xCB | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_RETF;
-			break;
-		case 0xEA:
-		case 0xEA | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_LJMP;
-			break;
-		case 0xEA | DIFF_SYNTAX_USE_INTEL:
-		case 0xEA | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_JMP;
-			break;
-		// Handle decode_table_two entries marked X86_OPC_DIFF_SYNTAX :
-		case 0xB6:
-		case 0xB6 | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVZXB;
-			break;
-		case 0xB6 | DIFF_SYNTAX_USE_INTEL:
-		case 0xB6 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-		case 0xB7 | DIFF_SYNTAX_USE_INTEL:
-		case 0xB7 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_MOVZX;
-			break;
-		case 0xB7:
-		case 0xB7 | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVZXW;
-			break;
-		case 0xBE:
-		case 0xBE | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVSXB;
-			break;
-		case 0xBE | DIFF_SYNTAX_USE_INTEL:
-		case 0xBE | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-		case 0xBF | DIFF_SYNTAX_USE_INTEL:
-		case 0xBF | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-			instr->type = X86_OPC_MOVSX;
-			break;
-		case 0xBF:
-		case 0xBF | DIFF_SYNTAX_SIZE_OVERRIDE:
-			instr->type = X86_OPC_MOVSXW;
-			break;
-		default:
-			decode_modrm_fields(instr, RAM[pc++]);
-			/* Opcode groups */
-			switch (instr->flags & GROUP_MASK) {
-			case GROUP_1:
-				instr->type = grp1_decode_table[instr->reg_opc];
-				break;
-			case GROUP_2:
-				instr->type = grp2_decode_table[instr->reg_opc];
-				break;
-			case GROUP_3:
-				instr->type = grp3_decode_table[instr->reg_opc];
-				if (instr->type == X86_OPC_TEST) {
-					instr->flags &= ~ADDRMOD_RM;
-					instr->flags |= ADDRMOD_IMM_RM;
-				}
-				break;
-			case GROUP_4:
-				instr->type = grp4_decode_table[instr->reg_opc];
-				break;
-			case GROUP_5:
-				instr->type = grp5_decode_table[instr->reg_opc];
-				if (instr->type == X86_OPC_DIFF_SYNTAX) {
-					switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | instr->reg_opc) {
-					// Handle grp5_decode_table entries marked X86_OPC_DIFF_SYNTAX :
-					case 0x3:
-						instr->type = X86_OPC_LCALL;
-						break;
-					case 0x3 | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_CALL;
-						break;
-					case 0x5:
-						instr->type = X86_OPC_LJMP;
-						break;
-					case 0x5 | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_JMP;
-						break;
-					default:
-						break;
-					}
-				}
-				break;
-			case GROUP_6:
-				instr->type = grp6_decode_table[instr->reg_opc];
-				break;
-			case GROUP_7:
-				instr->type = grp7_decode_table[instr->reg_opc];
-				switch (instr->type) {
-				case X86_OPC_DIFF_SYNTAX:
-					switch ((use_intel << DIFF_SYNTAX_USE_INTEL_SHIFT) | (op_size_override << DIFF_SYNTAX_SIZE_OVERRIDE_SHIFT) | instr->reg_opc) {
-					// Handle grp7_decode_table entries marked X86_OPC_DIFF_SYNTAX :
-					case 0x0:
-						instr->type = X86_OPC_SGDTL;
-						break;
-					case 0x0 | DIFF_SYNTAX_SIZE_OVERRIDE:
-						instr->type = X86_OPC_SGDTW;
-						break;
-					case 0x0 | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_SGDTD;
-						break;
-					case 0x0 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_SGDTW;
-						break;
-					case 0x1:
-						instr->type = X86_OPC_SIDTL;
-						break;
-					case 0x1 | DIFF_SYNTAX_SIZE_OVERRIDE:
-						instr->type = X86_OPC_SIDTW;
-						break;
-					case 0x1 | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_SIDTD;
-						break;
-					case 0x1 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_SIDTW;
-						break;
-					case 0x2:
-						instr->type = X86_OPC_LGDTL;
-						break;
-					case 0x2 | DIFF_SYNTAX_SIZE_OVERRIDE:
-						instr->type = X86_OPC_LGDTW;
-						break;
-					case 0x2 | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_LGDTD;
-						break;
-					case 0x2 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_LGDTW;
-						break;
-					case 0x3:
-						instr->type = X86_OPC_LIDTL;
-						break;
-					case 0x3 | DIFF_SYNTAX_SIZE_OVERRIDE:
-						instr->type = X86_OPC_LIDTW;
-						break;
-					case 0x3 | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_LIDTD;
-						break;
-					case 0x3 | DIFF_SYNTAX_SIZE_OVERRIDE | DIFF_SYNTAX_USE_INTEL:
-						instr->type = X86_OPC_LIDTW;
-						break;
-					default:
-						break;
-					}
-					break;
-				default:
-					break;
-				}
-				break;
-			case GROUP_8:
-				instr->type = grp8_decode_table[instr->reg_opc];
-				break;
-			case GROUP_9:
-				instr->type = grp9_decode_table[instr->reg_opc];
-				break;
-			default:
-				break;
-			}
-			decode_modrm_addr_modes(instr);
-			goto done_rm;
-		}
-	}
-
-	if (instr->flags & MOD_RM) {
-		decode_modrm_fields(instr, RAM[pc++]);
-		decode_modrm_addr_modes(instr);
-	}
-
-done_rm:
-
-	if (instr->flags & SIB)
-		decode_sib_byte(instr, RAM[pc++]);
+		decode_sib_byte(instr, read_u8(RAM, &pc));
 
 	if (instr->flags & MEM_DISP_MASK)
 		decode_disp(instr, RAM, &pc);

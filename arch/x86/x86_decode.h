@@ -129,17 +129,7 @@ enum x86_instr_flags : uint64_t {
 
 	REL_MASK		= SRC_REL,
 
-	/* Instruction decoding tables */
-	GROUP_1			= (1ULL << 47),
-	GROUP_2			= (1ULL << 48),
-	GROUP_3			= (1ULL << 49),
-	GROUP_4			= (1ULL << 50),
-	GROUP_5			= (1ULL << 51),
-	GROUP_6			= (1ULL << 52),
-	GROUP_7			= (1ULL << 53),
-	GROUP_8			= (1ULL << 54),
-	GROUP_9			= (1ULL << 55),
-	GROUP_MASK		= GROUP_1|GROUP_2|GROUP_3|GROUP_4|GROUP_5|GROUP_6|GROUP_7|GROUP_8|GROUP_9,
+	ADDRMOD_MASK        = MOD_RM|DIR_REVERSED|SRC_MASK|DST_MASK|OP3_MASK, // All flags except SIB and all WIDTH_* flags
 };
 
 /*
@@ -201,26 +191,26 @@ struct x86_instr { /* Instances of x86_instr are populated in arch_x86_decode_in
 		int32_t			rel_data[2];	/* Relative address data */
 	};
 
-	unsigned long long	type;		/* See enum arch_x86_opcode */
-	unsigned long long	flags;		/* See enum x86_instr_flags */
+	unsigned opcode; /* See enum arch_x86_opcode */
+	uint64_t flags; /* See enum x86_instr_flags */
 	union {
 		struct {
-#define X86_PREFIX_INDEX_SEG_OVERRIDE 0
-			enum x86_seg_override seg_override;
-#define X86_PREFIX_INDEX_REP_OVERRIDE 1
-			enum x86_rep_prefix rep_prefix;
-#define X86_PREFIX_INDEX_LOCK_PREFIX 2
+#define SEG_OVERRIDE 0
+			uint8_t seg_override; /* See enum x86_seg_override */
+#define REP_OVERRIDE 1
+			uint8_t rep_prefix; /* See enum x86_rep_prefix */
+#define LOCK_PREFIX 2
 			uint8_t lock_prefix;
-#define X86_PREFIX_INDEX_ADDR_SIZE_OVERRIDE 3
+#define ADDRESS_SIZE_OVERRIDE 3
 			uint8_t addr_size_override;
-#define X86_PREFIX_INDEX_OP_SIZE_OVERRIDE 4
+#define OPERAND_SIZE_OVERRIDE 4
 			uint8_t op_size_override;
-#define X86_PREFIX_INDEX_IS_TWO_BYTE_INSTR 5
+#define IS_TWO_BYTE_INSTR 5
 			uint8_t is_two_byte_instr; /* Only read in arch_x86_disasm_*.cpp */
-#define X86_PREFIX_INDEX_COUNT 6
-		}
+		};
 		uint8_t prefix_values[6];
-	}
+	};
+
 	struct x86_operand	operand[OPNUM_COUNT];
 };
 
