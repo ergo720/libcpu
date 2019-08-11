@@ -571,7 +571,7 @@ static const uint32_t grp2_decode_table[8] = {
 };
 
 static const uint32_t grp3_decode_table[8] = {
-	/*[0x00]*/	X86_OPC_TEST,
+	/*[0x00]*/	X86_OPC_TEST | ADDRMOD_IMM_RM,
 	/*[0x01]*/	X86_OPC_UNDEFINED,
 	/*[0x02]*/	X86_OPC_NOT,
 	/*[0x03]*/	X86_OPC_NEG,
@@ -619,10 +619,10 @@ static const uint32_t grp7_decode_table[8] = {
 	/*[0x01]*/	X86_OPC_DIFF_SYNTAX,
 	/*[0x02]*/	X86_OPC_DIFF_SYNTAX,
 	/*[0x03]*/	X86_OPC_DIFF_SYNTAX,
-	/*[0x04]*/	X86_OPC_SMSW,
+	/*[0x04]*/	X86_OPC_SMSW | WIDTH_WORD,
 	/*[0x05]*/	X86_OPC_UNDEFINED,
-	/*[0x06]*/	X86_OPC_LMSW,
-	/*[0x07]*/	X86_OPC_INVLPG,
+	/*[0x06]*/	X86_OPC_LMSW | WIDTH_WORD,
+	/*[0x07]*/	X86_OPC_INVLPG | WIDTH_BYTE,
 };
 
 static const uint32_t grp8_decode_table[8] = {
@@ -647,7 +647,7 @@ static const uint32_t grp9_decode_table[8] = {
 	/*[0x07]*/	X86_OPC_UNDEFINED,
 };
 
-static const uint32_t[] decode_tables = {
+static const uint64_t[][] decode_tables = {
 	decode_table_one,
 	decode_table_two,
 	grp1_decode_table,
@@ -662,11 +662,31 @@ static const uint32_t[] decode_tables = {
 };
 
 // offset 0 = standard, 1 = size_override, 2 = intel syntax, 3 = intel syntax AND size override 
-static const arch_x86_opcode diff_syntax_opcodes[] = {
-	// TODO : Populate this
-};
+static const uint64_t diff_syntax_flags_0x62 = { WIDTH_DWORD, WIDTH_WORD, WIDTH_QWORD, WIDTH_DWORD };
 
-static const uint64_t diff_syntax_flags_0x62 = {WIDTH_DWORD, WIDTH_WORD, WIDTH_QWORD, WIDTH_DWORD};
+static const arch_x86_opcode diff_syntax_opcodes[][4] = { // Opcodes for all elements marked with X86_OPC_DIFF_SYNTAX
+	// decode_table_one :
+	/*[0x62]*/	{ X86_OPC_BOUND, X86_OPC_BOUND, X86_OPC_BOUND, X86_OPC_BOUND }, // marked X86_OPC_DIFF_SYNTAX for diff_syntax_flags_0x62 (all use X86_OPC_BOUND)
+	/*[0x98]*/	{ X86_OPC_CWTL, X86_OPC_CBTV, X86_OPC_CWDE, X86_OPC_CBW },
+	/*[0x99]*/	{ X86_OPC_CLTD, X86_OPC_CWTD, X86_OPC_CDQ, X86_OPC_CWD },
+	/*[0x9A]*/	{ X86_OPC_LCALL, X86_OPC_LCALL, X86_OPC_CALL, X86_OPC_CALL }, // Identical to 0x03
+	/*[0xCA]*/	{ X86_OPC_LRET, X86_OPC_LRET, X86_OPC_RETF, X86_OPC_RETF }, // Identical to 0xCB \_
+	/*[0xCB]*/	{ X86_OPC_LRET, X86_OPC_LRET, X86_OPC_RETF, X86_OPC_RETF }, // Identical to 0xCA /
+	/*[0xEA]*/	{ X86_OPC_LJMP, X86_OPC_LJMP, X86_OPC_JMP, X86_OPC_JMP }, // Identical to 0x05
+	// decode_table_two :
+	/*[0xB6]*/	{ X86_OPC_MOVZXB, X86_OPC_MOVZXB, X86_OPC_MOVZX, X86_OPC_MOVZX }, // Identical to 0xB7 \_
+	/*[0xB7]*/	{ X86_OPC_MOVZXW, X86_OPC_MOVZXW, X86_OPC_MOVZX, X86_OPC_MOVZX }, // Identical to 0xB6 /
+	/*[0xBE]*/	{ X86_OPC_MOVSXB, X86_OPC_MOVSXB, X86_OPC_MOVSX, X86_OPC_MOVSX }, // Identical to 0xBF \_
+	/*[0xBF]*/	{ X86_OPC_MOVSXW, X86_OPC_MOVSXW, X86_OPC_MOVSX, X86_OPC_MOVSX }, // Identical to 0xBE /
+	// grp5_decode_table :
+	/*[0x03]*/	{ X86_OPC_LCALL, X86_OPC_LCALL, X86_OPC_CALL, X86_OPC_CALL }, // Identical to 0x9A
+	/*[0x05]*/	{ X86_OPC_LJMP, X86_OPC_LJMP, X86_OPC_JMP, X86_OPC_JMP }, // Identical to 0xEA
+	// grp7_decode_table :
+	/*[0x00]*/	{ X86_OPC_SGDTL, X86_OPC_SGDTW, X86_OPC_SGDTD, X86_OPC_SGDTW },
+	/*[0x01]*/	{ X86_OPC_SIDTL, X86_OPC_SIDTW, X86_OPC_SIDTD, X86_OPC_SIDTW },
+	/*[0x02]*/	{ X86_OPC_LGDTL, X86_OPC_LGDTW, X86_OPC_LGDTD, X86_OPC_LGDTW },
+	/*[0x03]*/	{ X86_OPC_LIDTL, X86_OPC_LIDTW, X86_OPC_LIDTD, X86_OPC_LIDTW },
+};
 
 static void
 decode_third_operand(struct x86_instr *instr)
@@ -1279,13 +1299,14 @@ decode_byte:
 			decode_group = GET_FIELD(decode, X86_GROUP);
 			instr_byte = instr->reg_opc;
 			goto decode_byte;
-		case X86_DECODE_CLASS_DIFF_SYNTAX: {
+		case X86_DECODE_CLASS_DIFF_SYNTAX:
 			bits = instr->op_size_override | (use_intel << 1); // offset 0 = standard, 1 = size_override, 2 = intel syntax, 3 = intel syntax AND size override 
 			opcode = diff_syntax_opcodes[GET_FIELD(decode, X86_DIFF_SYNTAX)][bits];
 			if (instr_byte == 0x62)
 				instr->flags |= diff_syntax_flags_0x62[bits];
-			}
+			break;
 		}
+		// No default
 	}
 
 	instr->type = opcode;
@@ -1295,25 +1316,6 @@ decode_byte:
 			decode_modrm_addr_modes(instr);
 		}
 	} else {
-		switch (opcode) {
-		case X86_OPC_TEST:
-			if (decode_group == X86_GROUP(3)) {
-				instr->flags &= ~ADDRMOD_RM;
-				instr->flags |= ADDRMOD_IMM_RM;
-			}
-			break;
-		// These appear only in grp7_decode_table :
-		case X86_OPC_LMSW:
-		case X86_OPC_SMSW:
-			instr->flags &= ~WIDTH_DWORD;
-			instr->flags |= WIDTH_WORD;
-			break;
-		case X86_OPC_INVLPG:
-			instr->flags &= ~WIDTH_DWORD;
-			instr->flags |= WIDTH_BYTE;
-			break;
-		// no default
-		}
 		decode_modrm_addr_modes(instr);
 	}
 
@@ -1642,15 +1644,6 @@ arch_x86_decode_instr_old(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char
 					default:
 						break;
 					}
-					break;
-				case X86_OPC_LMSW:
-				case X86_OPC_SMSW:
-					instr->flags &= ~WIDTH_DWORD;
-					instr->flags |= WIDTH_WORD;
-					break;
-				case X86_OPC_INVLPG:
-					instr->flags &= ~WIDTH_DWORD;
-					instr->flags |= WIDTH_BYTE;
 					break;
 				default:
 					break;
