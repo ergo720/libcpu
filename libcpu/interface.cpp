@@ -192,7 +192,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	if (cpu->info.psr_size != 0) {
-		cpu->ptr_FLAG = (Value **)calloc(cpu->info.flags_count,
+		cpu->ptr_FLAG = (Value **)calloc(cpu->info.psr_size,
 				sizeof(Value*));
 		assert(cpu->ptr_FLAG != NULL);
 	}
