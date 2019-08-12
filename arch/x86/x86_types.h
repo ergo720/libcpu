@@ -60,8 +60,6 @@ PACKED(struct reg_x86_s {
 	};
 	/* Eflags register */
 	DEFINE_REG32(eflags);
-	/* Special purpose registers */
-	DEFINE_REG32(eip);
 	/* Segment registers */
 	DEFINE_REG16(cs);
 	DEFINE_REG16(ds);
@@ -75,7 +73,18 @@ PACKED(struct reg_x86_s {
 	DEFINE_REG32(cr2);
 	DEFINE_REG32(cr3);
 	DEFINE_REG32(cr4);
-	// TODO: GDTR, LDTR, IDTR, task, MTRR, MSR, MMX, SSE, debug regs
+	/* Debug registers */
+	DEFINE_REG32(dr0);
+	DEFINE_REG32(dr1);
+	DEFINE_REG32(dr2);
+	DEFINE_REG32(dr3);
+	DEFINE_REG32(dr4);
+	DEFINE_REG32(dr5);
+	DEFINE_REG32(dr6);
+	DEFINE_REG32(dr7);
+	// TODO: GDTR, LDTR, IDTR, task, MTRR, MSR, MMX, SSE
+	/* Program counter (must be last) */
+	DEFINE_REG32(eip);
 });
 typedef struct reg_x86_s reg_x86_t;
 

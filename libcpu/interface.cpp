@@ -40,8 +40,8 @@ extern arch_func_t arch_func_fapra;
 static inline bool
 is_valid_gpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	for (; offset < count; offset++) {
-		size_t size = cpu->info.register_layout[offset].bits_size;
+	for (uint32_t idx = offset; idx < count + offset; idx++) {
+		size_t size = cpu->info.register_layout[idx].bits_size;
 		switch (size) {
 		case 0: case 1: case 8: case 16: case 32: case 64:
 			break;
@@ -55,8 +55,8 @@ is_valid_gpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 static inline bool
 is_valid_fpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	for (; offset < count; offset++) {
-		size_t size = cpu->info.register_layout[offset].bits_size;
+	for (uint32_t idx = offset; idx < count + offset; idx++) {
+		size_t size = cpu->info.register_layout[idx].bits_size;
 		switch (size) {
 		case 0: case 32: case 64: case 80: case 128:
 			break;
@@ -70,8 +70,8 @@ is_valid_fpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 static inline bool
 is_valid_vr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	for (; offset < count; offset++) {
-		size_t size = cpu->info.register_layout[offset].bits_size;
+	for (uint32_t idx = offset; idx < count + offset; idx++) {
+		size_t size = cpu->info.register_layout[idx].bits_size;
 		switch (size) {
 		case 0: case 64: case 128:
 			break;
@@ -154,13 +154,13 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		offset += cpu->info.regclass_count[rc];
 	}
 
-	assert(is_valid_gpr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_GPR]) &&
+	assert(is_valid_gpr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_GPR], cpu->info.regclass_count[CPU_REGCLASS_GPR]) &&
 		"the specified GPR size is not guaranteed to work");
-	assert(is_valid_gpr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_XR]) &&
+	assert(is_valid_gpr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_XR], cpu->info.regclass_count[CPU_REGCLASS_XR]) &&
 		"the specified XR size is not guaranteed to work");
-	assert(is_valid_fpr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_FPR]) &&
+	assert(is_valid_fpr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_FPR], cpu->info.regclass_count[CPU_REGCLASS_FPR]) &&
 		"the specified FPR size is not guaranteed to work");
-	assert(is_valid_vr_size(cpu, offset, cpu->info.regclass_offset[CPU_REGCLASS_VR]) &&
+	assert(is_valid_vr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_VR], cpu->info.regclass_count[CPU_REGCLASS_VR]) &&
 		"the specified VR size is not guaranteed to work");
 
 

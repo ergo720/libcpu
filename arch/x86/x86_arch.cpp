@@ -90,8 +90,8 @@ arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->psr_size = 32;
 
 	info->regclass_count[CPU_REGCLASS_GPR] = 8;
-	info->regclass_count[CPU_REGCLASS_FPR] = 8;
 	info->regclass_count[CPU_REGCLASS_XR] = 20;
+	info->regclass_count[CPU_REGCLASS_FPR] = 8;
 	info->register_layout = arch_x86_register_layout;
 
 	info->flags_count = 18;
