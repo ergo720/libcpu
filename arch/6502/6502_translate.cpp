@@ -17,10 +17,6 @@
 #define X 1
 #define Y 2
 #define S 3
-#define ptr_A cpu->ptr_gpr[A]
-#define ptr_X cpu->ptr_gpr[X]
-#define ptr_Y cpu->ptr_gpr[Y]
-#define ptr_S cpu->ptr_gpr[S]
 
 /* these are the flags that aren't handled by the generic flag code */
 #define ptr_D cpu->ptr_FLAG[D_SHIFT]
@@ -45,7 +41,7 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 
 	switch (am) {
 		case ADDMODE_ACC:
-			return ptr_A;
+			return GPR(A);
 		case ADDMODE_BRA:
 		case ADDMODE_IMPL:
 			return NULL;
@@ -61,10 +57,10 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 	is_8bit_base = !((am == ADDMODE_ABS) || (am == ADDMODE_ABSX) || (am == ADDMODE_ABSY));
 	index_register_before = NULL;
 	if ((am == ADDMODE_ABSX) || (am == ADDMODE_INDX) || (am == ADDMODE_ZPX))
-		index_register_before = ptr_X;
+		index_register_before = GPR(X);
 	if ((am == ADDMODE_ABSY) || (am == ADDMODE_ZPY))
-		index_register_before = ptr_Y;
-	index_register_after = (am == ADDMODE_INDY)? ptr_Y : NULL;
+		index_register_before = GPR(Y);
+	index_register_after = (am == ADDMODE_INDY)? GPR(Y) : NULL;
 
 #if 0
 	LOG("pc = %x\n", pc);
@@ -194,11 +190,11 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case INSTR_BIT:	SET_NZ(OPERAND);							break;
 
 		/* arithmetic */
-		case INSTR_ADC:	SET_NZ(ADC(ptr_A, ptr_A, OPERAND, true, false));		break;
-		case INSTR_SBC:	SET_NZ(ADC(ptr_A, ptr_A, COM(OPERAND), true, false));	break;
-		case INSTR_CMP:	SET_NZ(ADC(NULL, ptr_A, COM(OPERAND), false, true));		break;
-		case INSTR_CPX:	SET_NZ(ADC(NULL, ptr_X, COM(OPERAND), false, true));		break;
-		case INSTR_CPY:	SET_NZ(ADC(NULL, ptr_Y, COM(OPERAND), false, true));		break;
+		case INSTR_ADC:	SET_NZ(ADC(GPR(A), GPR(A), OPERAND, true, false));		break;
+		case INSTR_SBC:	SET_NZ(ADC(GPR(A), GPR(A), COM(OPERAND), true, false));	break;
+		case INSTR_CMP:	SET_NZ(ADC(NULL, GPR(A), COM(OPERAND), false, true));		break;
+		case INSTR_CPX:	SET_NZ(ADC(NULL, GPR(X), COM(OPERAND), false, true));		break;
+		case INSTR_CPY:	SET_NZ(ADC(NULL, GPR(Y), COM(OPERAND), false, true));		break;
 
 		/* increment/decrement */
 		case INSTR_INX:	SET_NZ(LET(X,INC(R(X))));			break;

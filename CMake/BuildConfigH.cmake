@@ -9,6 +9,12 @@ check_library_exists(readline readline "" HAVE_LIBREADLINE)
 check_library_exists(rt clock_gettime "" HAVE_LIBRT)
 check_include_file(netinet/in.h HAVE_NETINET_IN_H)
 
+IF(MSVC)
+SET(CMAKE_REQUIRED_FLAGS "/std:c++14")
+ELSE(MSVC)
+SET(CMAKE_REQUIRED_FLAGS "-std=c++14")
+ENDIF(MSVC)
+
 CHECK_CXX_SOURCE_COMPILES("
 template <bool x> struct static_assertion;
 template <> struct static_assertion<true> {};

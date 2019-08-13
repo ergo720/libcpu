@@ -73,7 +73,7 @@ typedef enum {
 	CPU_ARCH_MIPS,
 	CPU_ARCH_M88K,
 	CPU_ARCH_ARM,
-	CPU_ARCH_8086,
+	CPU_ARCH_X86,
 	CPU_ARCH_FAPRA
 } cpu_arch_t;
 
@@ -102,13 +102,14 @@ enum {
 // @@@BEGIN_DEPRECATION
 // Four register classes
 enum {
-	CPU_REG_GPR, // General Purpose
-	CPU_REG_FPR, // Floating Point
-	CPU_REG_VR,  // Vector
-	CPU_REG_XR   // Extra Registers, the core expects these to follow
-	 			 // GPRs in the memory layout, they are kept separate
-				 // to avoid confusing the client about the number of
-				 // registers available.
+	CPU_REGCLASS_GPR, // General Purpose
+	CPU_REGCLASS_XR,  // Extra Registers, the core expects these to follow
+				  // GPRs in the memory layout, they are kept separate
+				  // to avoid confusing the client about the number of
+				  // registers available.
+	CPU_REGCLASS_FPR, // Floating Point
+	CPU_REGCLASS_VR,  // Vector
+	CPU_REGCLASS_COUNT
 };
 // @@@END_DEPRECATION
 
@@ -182,12 +183,9 @@ typedef struct cpu_archinfo {
 	uint32_t max_page_size;
 	uint32_t default_page_size;
 
-	// @@@BEGIN_DEPRECATION
-	uint32_t register_count[4];
-	uint32_t register_size[4];
-	// @@@END_DEPRECATION
-
 	cpu_register_layout_t const *register_layout;
+	size_t regclass_count[CPU_REGCLASS_COUNT];
+	size_t regclass_offset[CPU_REGCLASS_COUNT];
 	uint32_t register_count2;
 	cpu_flags_layout_t const *flags_layout;
 	uint32_t flags_count;
@@ -241,6 +239,7 @@ typedef struct cpu {
 	Value *ptr_grf; // gpr register file
 	Value **ptr_gpr; // GPRs
 	Value **in_ptr_gpr;
+
 	Value **ptr_xr; // XRs
 	Value **in_ptr_xr;
 
@@ -297,7 +296,13 @@ enum {
 #define CPU_DEBUG_PRINT_IR_OPTIMIZED	(1<<3)
 #define CPU_DEBUG_LOG					(1<<4)
 #define CPU_DEBUG_PROFILE				(1<<5)
+#define CPU_DEBUG_INTEL_SYNTAX			(1<<6)
 #define CPU_DEBUG_ALL 0xFFFFFFFF
+
+//////////////////////////////////////////////////////////////////////
+// debug flag shifts
+//////////////////////////////////////////////////////////////////////
+#define CPU_DEBUG_INTEL_SYNTAX_SHIFT		6
 
 //////////////////////////////////////////////////////////////////////
 // hints

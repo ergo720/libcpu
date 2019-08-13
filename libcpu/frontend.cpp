@@ -29,11 +29,11 @@
 
 // GET REGISTER
 Value *
-arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
+arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb, uint32_t shift) {
 	Value *v;
 	Value **regs = cpu->ptr_gpr;
-	uint32_t size = cpu->info.register_size[CPU_REG_GPR];
-	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
+	size_t size = cpu->info.register_layout[index].bits_size;
+	size_t count = cpu->info.regclass_count[CPU_REGCLASS_GPR];
 
 	/*
 	 * XXX If the index is past the number of the available GPRs,
@@ -43,8 +43,7 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	if (index >= count) {
 		index -= count;
 		regs = cpu->ptr_xr;
-		size = cpu->info.register_size[CPU_REG_XR];
-		count = cpu->info.register_count[CPU_REG_XR];
+		count = cpu->info.regclass_count[CPU_REGCLASS_XR];
 		if (index >= count) {
 			assert(0 && "GPR/XR register index is out of range!");
 			return NULL;
@@ -59,8 +58,12 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 	v = new LoadInst(regs[index], "", false, bb);
 
 	/* optionally truncate it */
-	if (bits != 0 && bits < size)
+	if (bits != 0 && bits < size) {
 		v = TRUNC(bits, v);
+		if (shift) {
+			v = LSHR(v, CONSTs(32, shift));
+		}
+	}
 
 	return v;
 }
@@ -68,7 +71,7 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb) {
 Value *
 arch_get_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb)
 {
-	assert(index < cpu->info.register_count[CPU_REG_FPR]);
+	assert(index < cpu->info.regclass_count[CPU_REGCLASS_FPR]);
 	/* get the register */
 	return new LoadInst(cpu->ptr_fpr[index], "", false, bb);
 }
@@ -79,8 +82,8 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
 	BasicBlock *bb)
 {
 	Value **regs = cpu->ptr_gpr;
-	uint32_t size = cpu->info.register_size[CPU_REG_GPR];
-	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
+	size_t size = cpu->info.register_layout[index].bits_size;
+	size_t count = cpu->info.regclass_count[CPU_REGCLASS_GPR];
 
 	/*
 	 * XXX If the index is past the number of the available GPRs,
@@ -90,8 +93,7 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
 	if (index >= count) {
 		index -= count;
 		regs = cpu->ptr_xr;
-		size = cpu->info.register_size[CPU_REG_XR];
-		count = cpu->info.register_count[CPU_REG_XR];
+		count = cpu->info.regclass_count[CPU_REGCLASS_XR];
 		if (index >= count) {
 			assert(0 && "GPR/XR register index is out of range!");
 			return NULL;
@@ -120,7 +122,7 @@ void
 arch_put_fp_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits,
 	BasicBlock *bb)
 {
-	assert(index < cpu->info.register_count[CPU_REG_FPR]);
+	assert(index < cpu->info.regclass_count[CPU_REGCLASS_FPR]);
 	if (bits == 0)
 		bits = v->getType()->getPrimitiveSizeInBits();
 	assert(bits == cpu->info.float_size);

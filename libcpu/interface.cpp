@@ -27,6 +27,7 @@
 #include "function.h"
 #include "optimize.h"
 #include "stat.h"
+#include "x86_internal.h"
 
 /* architecture descriptors */
 extern arch_func_t arch_func_6502;
@@ -34,42 +35,54 @@ extern arch_func_t arch_func_m68k;
 extern arch_func_t arch_func_mips;
 extern arch_func_t arch_func_m88k;
 extern arch_func_t arch_func_arm;
-extern arch_func_t arch_func_8086;
+extern arch_func_t arch_func_x86;
 extern arch_func_t arch_func_fapra;
 
 #define IS_LITTLE_ENDIAN(cpu) (((cpu)->info.common_flags & CPU_FLAG_ENDIAN_MASK) == CPU_FLAG_ENDIAN_LITTLE)
 
 static inline bool
-is_valid_gpr_size(size_t size)
+is_valid_gpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	switch (size) {
+	for (uint32_t idx = offset; idx < count + offset; idx++) {
+		size_t size = cpu->info.register_layout[idx].bits_size;
+		switch (size) {
 		case 0: case 1: case 8: case 16: case 32: case 64:
-			return true;
+			break;
 		default:
 			return false;
+		}
 	}
+	return true;
 }
 
 static inline bool
-is_valid_fpr_size(size_t size)
+is_valid_fpr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	switch (size) {
+	for (uint32_t idx = offset; idx < count + offset; idx++) {
+		size_t size = cpu->info.register_layout[idx].bits_size;
+		switch (size) {
 		case 0: case 32: case 64: case 80: case 128:
-			return true;
+			break;
 		default:
 			return false;
+		}
 	}
+	return true;
 }
 
 static inline bool
-is_valid_vr_size(size_t size)
+is_valid_vr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 {
-	switch (size) {
+	for (uint32_t idx = offset; idx < count + offset; idx++) {
+		size_t size = cpu->info.register_layout[idx].bits_size;
+		switch (size) {
 		case 0: case 64: case 128:
-			return true;
+			break;
 		default:
 			return false;
+		}
 	}
+	return true;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -83,10 +96,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 
 	llvm::InitializeNativeTarget();
 
-	cpu = new cpu_t;
+	cpu = new cpu_t();
 	assert(cpu != NULL);
-	memset(&cpu->info, 0, sizeof(cpu->info));
-	memset(&cpu->rf, 0, sizeof(cpu->rf));
 
 	cpu->ctx = new LLVMContext();
 	cpu->info.type = arch;
@@ -110,8 +121,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		case CPU_ARCH_ARM:
 			cpu->f = arch_func_arm;
 			break;
-		case CPU_ARCH_8086:
-			cpu->f = arch_func_8086;
+		case CPU_ARCH_X86:
+			cpu->f = arch_func_x86;
 			break;
 		case CPU_ARCH_FAPRA:
 			cpu->f = arch_func_fapra;
@@ -141,16 +152,23 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	// init the frontend
 	cpu->f.init(cpu, &cpu->info, &cpu->rf);
 
-	assert(is_valid_gpr_size(cpu->info.register_size[CPU_REG_GPR]) &&
-		"the specified GPR size is not guaranteed to work");
-	assert(is_valid_fpr_size(cpu->info.register_size[CPU_REG_FPR]) &&
-		"the specified FPR size is not guaranteed to work");
-	assert(is_valid_vr_size(cpu->info.register_size[CPU_REG_VR]) &&
-		"the specified VR size is not guaranteed to work");
-	assert(is_valid_gpr_size(cpu->info.register_size[CPU_REG_XR]) &&
-		"the specified XR size is not guaranteed to work");
+	size_t offset = 0;
+	for (unsigned rc = 0; rc < CPU_REGCLASS_COUNT; rc++) {
+		cpu->info.regclass_offset[rc] = offset;
+		offset += cpu->info.regclass_count[rc];
+	}
 
-	uint32_t count = cpu->info.register_count[CPU_REG_GPR];
+	assert(is_valid_gpr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_GPR], cpu->info.regclass_count[CPU_REGCLASS_GPR]) &&
+		"the specified GPR size is not guaranteed to work");
+	assert(is_valid_gpr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_XR], cpu->info.regclass_count[CPU_REGCLASS_XR]) &&
+		"the specified XR size is not guaranteed to work");
+	assert(is_valid_fpr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_FPR], cpu->info.regclass_count[CPU_REGCLASS_FPR]) &&
+		"the specified FPR size is not guaranteed to work");
+	assert(is_valid_vr_size(cpu, cpu->info.regclass_offset[CPU_REGCLASS_VR], cpu->info.regclass_count[CPU_REGCLASS_VR]) &&
+		"the specified VR size is not guaranteed to work");
+
+
+	uint32_t count = cpu->info.regclass_count[CPU_REGCLASS_GPR];
 	if (count != 0) {
 		cpu->ptr_gpr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_gpr = (Value **)calloc(count, sizeof(Value *));
@@ -159,7 +177,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->in_ptr_gpr = NULL;
 	}
 
-	count = cpu->info.register_count[CPU_REG_XR];
+	count = cpu->info.regclass_count[CPU_REGCLASS_XR];
 	if (count != 0) {
 		cpu->ptr_xr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_xr = (Value **)calloc(count, sizeof(Value *));
@@ -168,7 +186,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->in_ptr_xr = NULL;
 	}
 
-	count = cpu->info.register_count[CPU_REG_FPR];
+	count = cpu->info.regclass_count[CPU_REGCLASS_FPR];
 	if (count != 0) {
 		cpu->ptr_fpr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_fpr = (Value **)calloc(count, sizeof(Value *));
@@ -178,7 +196,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	if (cpu->info.psr_size != 0) {
-		cpu->ptr_FLAG = (Value **)calloc(cpu->info.flags_count,
+		cpu->ptr_FLAG = (Value **)calloc(cpu->info.psr_size,
 				sizeof(Value*));
 		assert(cpu->ptr_FLAG != NULL);
 	}

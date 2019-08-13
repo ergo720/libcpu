@@ -11,6 +11,26 @@
 #include "arm_internal.h"
 #include "frontend.h"
 
+static cpu_register_layout_t arch_arm_register_layout[] = {
+	{ 0, 32, 0, 0, 0, "R0" },
+	{ 0, 32, 0, 0, 0, "R1" },
+	{ 0, 32, 0, 0, 0, "R2" },
+	{ 0, 32, 0, 0, 0, "R3" },
+	{ 0, 32, 0, 0, 0, "R4" },
+	{ 0, 32, 0, 0, 0, "R5" },
+	{ 0, 32, 0, 0, 0, "R6" },
+	{ 0, 32, 0, 0, 0, "R7" },
+	{ 0, 32, 0, 0, 0, "R8" },
+	{ 0, 32, 0, 0, 0, "R9" },
+	{ 0, 32, 0, 0, 0, "R10" },
+	{ 0, 32, 0, 0, 0, "R11" },
+	{ 0, 32, 0, 0, 0, "R12" },
+	{ 0, 32, 0, 0, 0, "R13" },
+	{ 0, 32, 0, 0, 0, "R14" },
+	{ 0, 32, 0, 0, 0, "R15" },
+	{ 0, 32, 0, 0, 0, "CPSR" },
+};
+
 static void
 arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
@@ -32,11 +52,10 @@ arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->float_size = 64;
 	info->address_size = 32;
 	// There are 16 32-bit GPRs
-	info->register_count[CPU_REG_GPR] = 16;
-	info->register_size[CPU_REG_GPR] = info->word_size;
+	info->regclass_count[CPU_REGCLASS_GPR] = 16;
 	// There is also 1 extra register to handle PSR.
-	info->register_count[CPU_REG_XR] = 1;
-	info->register_size[CPU_REG_XR] = 32;
+	info->regclass_count[CPU_REGCLASS_XR] = 1;
+	info->register_layout = arch_arm_register_layout;
 
 	reg_arm_t *reg;
 	reg = (reg_arm_t*)malloc(sizeof(reg_arm_t));

@@ -23,7 +23,7 @@ debug_function(cpu_t *cpu)
 int
 main(int argc, char **argv)
 {
-	char *executable;
+	char *executable = "";
 	cpu_arch_t arch;
 	cpu_t *cpu;
 	uint8_t *RAM;
@@ -33,18 +33,32 @@ main(int argc, char **argv)
 	int singlestep = SINGLESTEP_NONE;
 	int log = 1;
 	int print_ir = 0;
+	int intel_syntax = 0;
 
 	/* parameter parsing */
 	if (argc < 2) {
-		printf("Usage: %s [--print-ir] <binary>\n", argv[0]);
+		printf("Usage: %s [--print-ir] [--intel] <binary>\n", argv[0]);
 		return 0;
 	}
-	if (!strcmp(argv[1], "--print-ir")) {
-		print_ir = 1;
-		argv++;
+
+	for (int idx = 1; idx < argc; idx++) {
+		char *arg;
+		if (*(arg = argv[idx]) != '-') {
+			executable = arg;
+			continue;
+		}
+		if (*(arg = ++argv[idx]) == '-') {
+			++arg;
+			if (!strcmp(arg, "print-ir")) {
+				print_ir = 1;
+			}
+			else if (!strcmp(arg, "intel")) {
+				intel_syntax = 1;
+			}
+		}
 	}
-	executable = argv[1];
-	arch = CPU_ARCH_8086;
+
+	arch = CPU_ARCH_X86;
 
 	ramsize = 1*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);
@@ -58,6 +72,7 @@ main(int argc, char **argv)
 		| (log? CPU_DEBUG_LOG :0)
 		| (singlestep == SINGLESTEP_STEP? CPU_DEBUG_SINGLESTEP    : 0)
 		| (singlestep == SINGLESTEP_BB?   CPU_DEBUG_SINGLESTEP_BB : 0)
+		| (intel_syntax? CPU_DEBUG_INTEL_SYNTAX : 0)
 		);
 
 	cpu_set_ram(cpu, RAM);

@@ -5,11 +5,20 @@
  */
 
 #include <assert.h>
+#include <stddef.h>
 
 #include "libcpu.h"
 #include "6502_isa.h"
 #include "frontend.h"
 #include "6502_internal.h"
+
+static cpu_register_layout_t arch_6502_register_layout[] = {
+	{ 0, 8, 0, 0, 0, "X" },
+	{ 0, 8, 0, 0, 0, "Y" },
+	{ 0, 8, 0, 0, 0, "S" },
+	{ 0, 8, 0, 0, 0, "A" },
+	{ 0, 8, 0, 0, 0, "P" },
+};
 
 static cpu_flags_layout_t arch_6502_flags_layout[] = {
 	{ N_SHIFT, CPU_FLAGTYPE_NEGATIVE, "N" },	/* negative */
@@ -41,11 +50,10 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->address_size = 16;
 	info->psr_size = 8;
 	// There are 4 8-bit GPRs
-	info->register_count[CPU_REG_GPR] = 4;
-	info->register_size[CPU_REG_GPR] = info->word_size;
+	info->regclass_count[CPU_REGCLASS_GPR] = 4;
 	// There is also 1 extra register to handle PSR.
-	info->register_count[CPU_REG_XR] = 1;
-	info->register_size[CPU_REG_XR] = 8;
+	info->regclass_count[CPU_REGCLASS_XR] = 1;
+	info->register_layout = arch_6502_register_layout;
 
 	info->flags_count = 8;
 	info->flags_layout = arch_6502_flags_layout;

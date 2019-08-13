@@ -10,6 +10,75 @@
 #define ptr_TRAPNO	ptr_xr[1]
 #define ptr_C		(cpu->feptr)
 
+static cpu_register_layout_t arch_m88k_register_layout[] = {
+	{ 0, 32, 0, 0, 0, "R0" },
+	{ 0, 32, 0, 0, 0, "R1" },
+	{ 0, 32, 0, 0, 0, "R2" },
+	{ 0, 32, 0, 0, 0, "R3" },
+	{ 0, 32, 0, 0, 0, "R4" },
+	{ 0, 32, 0, 0, 0, "R5" },
+	{ 0, 32, 0, 0, 0, "R6" },
+	{ 0, 32, 0, 0, 0, "R7" },
+	{ 0, 32, 0, 0, 0, "R8" },
+	{ 0, 32, 0, 0, 0, "R9" },
+	{ 0, 32, 0, 0, 0, "R10" },
+	{ 0, 32, 0, 0, 0, "R11" },
+	{ 0, 32, 0, 0, 0, "R12" },
+	{ 0, 32, 0, 0, 0, "R13" },
+	{ 0, 32, 0, 0, 0, "R14" },
+	{ 0, 32, 0, 0, 0, "R15" },
+	{ 0, 32, 0, 0, 0, "R16" },
+	{ 0, 32, 0, 0, 0, "R17" },
+	{ 0, 32, 0, 0, 0, "R18" },
+	{ 0, 32, 0, 0, 0, "R19" },
+	{ 0, 32, 0, 0, 0, "R20" },
+	{ 0, 32, 0, 0, 0, "R21" },
+	{ 0, 32, 0, 0, 0, "R22" },
+	{ 0, 32, 0, 0, 0, "R23" },
+	{ 0, 32, 0, 0, 0, "R24" },
+	{ 0, 32, 0, 0, 0, "R25" },
+	{ 0, 32, 0, 0, 0, "R26" },
+	{ 0, 32, 0, 0, 0, "R27" },
+	{ 0, 32, 0, 0, 0, "R28" },
+	{ 0, 32, 0, 0, 0, "R29" },
+	{ 0, 32, 0, 0, 0, "R30" },
+	{ 0, 32, 0, 0, 0, "R31" },
+	{ 0, 32, 0, 0, 0, "PSR" },
+	{ 0, 32, 0, 0, 0, "TRAPNO" },
+	{ 0, 80, 0, 0, 0, "X0" },
+	{ 0, 80, 0, 0, 0, "X1" },
+	{ 0, 80, 0, 0, 0, "X2" },
+	{ 0, 80, 0, 0, 0, "X3" },
+	{ 0, 80, 0, 0, 0, "X4" },
+	{ 0, 80, 0, 0, 0, "X5" },
+	{ 0, 80, 0, 0, 0, "X6" },
+	{ 0, 80, 0, 0, 0, "X7" },
+	{ 0, 80, 0, 0, 0, "X8" },
+	{ 0, 80, 0, 0, 0, "X9" },
+	{ 0, 80, 0, 0, 0, "X10" },
+	{ 0, 80, 0, 0, 0, "X11" },
+	{ 0, 80, 0, 0, 0, "X12" },
+	{ 0, 80, 0, 0, 0, "X13" },
+	{ 0, 80, 0, 0, 0, "X14" },
+	{ 0, 80, 0, 0, 0, "X15" },
+	{ 0, 80, 0, 0, 0, "X16" },
+	{ 0, 80, 0, 0, 0, "X17" },
+	{ 0, 80, 0, 0, 0, "X18" },
+	{ 0, 80, 0, 0, 0, "X19" },
+	{ 0, 80, 0, 0, 0, "X20" },
+	{ 0, 80, 0, 0, 0, "X21" },
+	{ 0, 80, 0, 0, 0, "X22" },
+	{ 0, 80, 0, 0, 0, "X23" },
+	{ 0, 80, 0, 0, 0, "X24" },
+	{ 0, 80, 0, 0, 0, "X25" },
+	{ 0, 80, 0, 0, 0, "X26" },
+	{ 0, 80, 0, 0, 0, "X27" },
+	{ 0, 80, 0, 0, 0, "X28" },
+	{ 0, 80, 0, 0, 0, "X29" },
+	{ 0, 80, 0, 0, 0, "X30" },
+	{ 0, 80, 0, 0, 0, "X31" },
+};
+
 static void
 arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
@@ -43,14 +112,12 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->max_page_size = 4096;
 	info->default_page_size = 4096;
 	// There are 32 32-bit GPRs and 32 80-bit FPRs.
-	info->register_count[CPU_REG_GPR] = 32;
-	info->register_size[CPU_REG_GPR] = info->word_size;
-	info->register_count[CPU_REG_FPR] = 32;
-	info->register_size[CPU_REG_FPR] = info->float_size;
+	info->regclass_count[CPU_REGCLASS_GPR] = 32;
+	info->regclass_count[CPU_REGCLASS_FPR] = 32;
 	// There are also 2 extra registers to handle
 	// PSR and TRAPNO.
-	info->register_count[CPU_REG_XR] = 2;
-	info->register_size[CPU_REG_XR] = 32;
+	info->regclass_count[CPU_REGCLASS_XR] = 2;
+	info->register_layout = arch_m88k_register_layout;
 
 	// Setup the register files
 	reg = (m88k_grf_t *)malloc(sizeof(m88k_grf_t));

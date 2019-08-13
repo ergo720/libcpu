@@ -26,19 +26,19 @@ static StructType *
 get_struct_reg(cpu_t *cpu, const char* name) {
 	std::vector<Type*>type_struct_reg_t_fields;
 
-	uint32_t count, size;
+	uint32_t count, offset;
 	
 	// GPRs
-	count = cpu->info.register_count[CPU_REG_GPR];
-	size  = cpu->info.register_size[CPU_REG_GPR];
+	count = cpu->info.regclass_count[CPU_REGCLASS_GPR];
+	offset = cpu->info.regclass_offset[CPU_REGCLASS_GPR];
 	for (uint32_t n = 0; n < count; n++)
-		type_struct_reg_t_fields.push_back(getIntegerType(size));
+		type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.register_layout[offset + n].bits_size));
 
 	// XRs
-	count = cpu->info.register_count[CPU_REG_XR];
-	size  = cpu->info.register_size[CPU_REG_XR];
+	count = cpu->info.regclass_count[CPU_REGCLASS_XR];
+	offset = cpu->info.regclass_offset[CPU_REGCLASS_XR];
 	for (uint32_t n = 0; n < count; n++)
-		type_struct_reg_t_fields.push_back(getIntegerType(size));
+		type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.register_layout[offset + n].bits_size));
 
 //	type_struct_reg_t_fields.push_back(getIntegerType(cpu->info.address_size)); /* PC */
 
@@ -51,8 +51,8 @@ get_struct_fp_reg(cpu_t *cpu, const char* name) {
 
 	uint32_t count, size;
 
-	count = cpu->info.register_count[CPU_REG_FPR];
-	size  = cpu->info.register_size[CPU_REG_FPR];
+	count = cpu->info.regclass_count[CPU_REGCLASS_FPR];
+	size  = cpu->info.float_size;
 	for (uint32_t n = 0; n < count; n++) {
 		if (size == 80) {
 			if ((cpu->flags & CPU_FLAG_FP80) == 0) {
@@ -91,18 +91,19 @@ get_struct_member_pointer(cpu_t *cpu, Value *s, int index, BasicBlock *bb) {
 }
 
 static void
-emit_decode_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
-	uint32_t offset, Value *rf, Value **in_ptr_r, Value **ptr_r,
-	char const *rcname, BasicBlock *bb)
+emit_decode_reg_helper(cpu_t *cpu, unsigned regclass,
+	Value *rf, Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
 {
+	size_t count = cpu->info.regclass_count[regclass];
+	size_t offset = cpu->info.regclass_offset[regclass];
 #ifdef OPT_LOCAL_REGISTERS
 	// decode struct reg and copy the registers into local variables
 	for (uint32_t i = 0; i < count; i++) {
 		char reg_name[16];
-		snprintf(reg_name, sizeof(reg_name), "%s_%u", rcname, i);
+		snprintf(reg_name, sizeof(reg_name), "%s", cpu->info.register_layout[i + offset].name);
 
 		in_ptr_r[i] = get_struct_member_pointer(cpu, rf, i + offset, bb);
-		ptr_r[i] = new AllocaInst(getIntegerType(width), 0, reg_name, bb);
+		ptr_r[i] = new AllocaInst(getIntegerType(cpu->info.register_layout[i + offset].bits_size), 0, reg_name, bb);
 		LoadInst* v = new LoadInst(in_ptr_r[i], "", false, bb);
 		new StoreInst(v, ptr_r[i], false, bb);
 	}
@@ -119,30 +120,34 @@ fp_alignment(unsigned width) {
 }
 
 static void
-emit_decode_fp_reg_helper(cpu_t *cpu, uint32_t count, uint32_t width,
-	Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
+emit_decode_fp_reg_helper(cpu_t *cpu, BasicBlock *bb)
 {
+	unsigned count = cpu->info.regclass_count[CPU_REGCLASS_FPR];
+	Value **ptr_r = cpu->ptr_fpr;
 #ifdef OPT_LOCAL_REGISTERS
+	Value **in_ptr_r = cpu->in_ptr_fpr;
+	unsigned offset = cpu->info.regclass_offset[CPU_REGCLASS_FPR];
+	unsigned width = cpu->info.float_size;
 	// decode struct reg and copy the registers into local variables
 	for (uint32_t i = 0; i < count; i++) {
 		char reg_name[16];
 		if ((width == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) ||
 			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
-			snprintf(reg_name, sizeof(reg_name), "fpr_%u_0", i);
+			snprintf(reg_name, sizeof(reg_name), "%s_%u_0", cpu->info.register_layout[i + offset].name, i);
 
 			in_ptr_r[i*2+0] = get_struct_member_pointer(cpu, cpu->ptr_frf, i*2+0, bb);
 			ptr_r[i*2+0] = new AllocaInst(getIntegerType(64), 0, 0, 0, reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i*2+0], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+0], false, 0, bb);
 
-			snprintf(reg_name, sizeof(reg_name), "fpr_%u_1", i);
+			snprintf(reg_name, sizeof(reg_name), "%s_%u_1", cpu->info.register_layout[i + offset].name, i);
 
 			in_ptr_r[i*2+1] = get_struct_member_pointer(cpu, cpu->ptr_frf, i*2+1, bb);
 			ptr_r[i*2+1] = new AllocaInst(getIntegerType(64), 0, 0, 0, reg_name, bb);
 			v = new LoadInst(in_ptr_r[i*2+1], "", false, 0, bb);
 			new StoreInst(v, ptr_r[i*2+1], false, 0, bb);
 		} else {
-			snprintf(reg_name, sizeof(reg_name), "fpr_%u", i);
+			snprintf(reg_name, sizeof(reg_name), "%s", cpu->info.register_layout[i + offset].name);
 			in_ptr_r[i] = get_struct_member_pointer(cpu, cpu->ptr_frf, i, bb);
 			ptr_r[i] = new AllocaInst(getFloatType(width), 0, 0, fp_alignment(width), reg_name, bb);
 			LoadInst* v = new LoadInst(in_ptr_r[i], "", false, fp_alignment(width), bb);
@@ -160,20 +165,17 @@ static void
 emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 {
 	// GPRs
-	emit_decode_reg_helper(cpu, cpu->info.register_count[CPU_REG_GPR],
-		cpu->info.register_size[CPU_REG_GPR], 0, cpu->ptr_grf,
-		cpu->in_ptr_gpr, cpu->ptr_gpr, "gpr", bb);
+	emit_decode_reg_helper(cpu, CPU_REGCLASS_GPR,
+		cpu->ptr_grf,
+		cpu->in_ptr_gpr, cpu->ptr_gpr, bb);
 
 	// XRs
-	emit_decode_reg_helper(cpu, cpu->info.register_count[CPU_REG_XR],
-		cpu->info.register_size[CPU_REG_XR],
-		cpu->info.register_count[CPU_REG_GPR], cpu->ptr_grf,
-		cpu->in_ptr_xr, cpu->ptr_xr, "xr", bb);
+	emit_decode_reg_helper(cpu, CPU_REGCLASS_XR,
+		cpu->ptr_grf, // TODO : Shouldn't this be cpu->ptr_xr ?!?
+		cpu->in_ptr_xr, cpu->ptr_xr, bb);
 
 	// FPRs
-	emit_decode_fp_reg_helper(cpu, cpu->info.register_count[CPU_REG_FPR],
-		cpu->info.register_size[CPU_REG_FPR], cpu->in_ptr_fpr,
-		cpu->ptr_fpr, bb);
+	emit_decode_fp_reg_helper(cpu, bb);
 
 	// PC pointer.
 	IntegerType *intptr_type = cpu->exec_engine->getDataLayout().getIntPtrType(_CTX());
@@ -229,10 +231,13 @@ spill_reg_state_helper(uint32_t count, Value **in_ptr_r, Value **ptr_r,
 }
 
 static void
-spill_fp_reg_state_helper(cpu_t *cpu, uint32_t count, uint32_t width,
-	Value **in_ptr_r, Value **ptr_r, BasicBlock *bb)
+spill_fp_reg_state_helper(cpu_t *cpu, BasicBlock *bb)
 {
 #ifdef OPT_LOCAL_REGISTERS
+	size_t count = cpu->info.regclass_count[CPU_REGCLASS_FPR];
+	uint32_t width = cpu->info.float_size;
+	Value **in_ptr_r = cpu->in_ptr_fpr;
+	Value **ptr_r = cpu->ptr_fpr;
 	for (uint32_t i = 0; i < count; i++) {
 		if ((width == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) ||
 			(width == 128 && (cpu->flags & CPU_FLAG_FP128) == 0)) {
@@ -264,17 +269,15 @@ spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 	}
 
 	// GPRs
-	spill_reg_state_helper(cpu->info.register_count[CPU_REG_GPR],
+	spill_reg_state_helper(cpu->info.regclass_count[CPU_REGCLASS_GPR],
 		cpu->in_ptr_gpr, cpu->ptr_gpr, bb);
 
 	// XRs
-	spill_reg_state_helper(cpu->info.register_count[CPU_REG_XR],
+	spill_reg_state_helper(cpu->info.regclass_count[CPU_REGCLASS_XR],
 		cpu->in_ptr_xr, cpu->ptr_xr, bb);
 
 	// FPRs
-	spill_fp_reg_state_helper(cpu, cpu->info.register_count[CPU_REG_FPR],
-		cpu->info.register_size[CPU_REG_FPR], cpu->in_ptr_fpr,
-		cpu->ptr_fpr, bb);
+	spill_fp_reg_state_helper(cpu, bb);
 }
 
 Function*
