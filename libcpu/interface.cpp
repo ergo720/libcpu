@@ -16,6 +16,11 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#if defined _WIN32
+#include "llvm/ExecutionEngine/MCJIT.h"
+//#include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
+//#include "llvm/ExecutionEngine/Interpreter.h"
+#endif
 
 /* project global headers */
 #include "libcpu.h"
@@ -95,6 +100,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu_t *cpu;
 
 	llvm::InitializeNativeTarget();
+	llvm::InitializeNativeTargetAsmPrinter();
+	llvm::InitializeNativeTargetAsmParser();
 
 	cpu = new cpu_t();
 	assert(cpu != NULL);
@@ -337,6 +344,7 @@ cpu_translate_function(cpu_t *cpu)
 
 	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
+	cpu->exec_engine->finalizeObject();
 	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
 	assert(cpu->fp[cpu->functions] != NULL);
 	update_timing(cpu, TIMER_BE, false);

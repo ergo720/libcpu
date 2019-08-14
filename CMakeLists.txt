@@ -37,7 +37,7 @@ INCLUDE(CMake/FindLLVM.cmake)
 
 INCLUDE(CMake/BuildConfigH.cmake)
 IF(MSVC)
-	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -D__STDC_FORMAT_MACROS)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS -D__STDC_FORMAT_MACROS -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS)
 	# disable warnings for LLVM
 	add_definitions(-wd4146) # unary minus operator applied to unsigned type, result still unsigned
 	add_definitions(-wd4800) # forcing value to bool 'true' or 'false' (performance warning)
