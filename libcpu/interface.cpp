@@ -209,10 +209,10 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// init LLVM
-	cpu->mod = new Module(cpu->info.name, _CTX());
+	std::unique_ptr<Module> mod_ptr(new Module(cpu->info.name, _CTX()));
+	cpu->mod = mod_ptr.get();
 	assert(cpu->mod != NULL);
-	std::unique_ptr<llvm::Module> module_ptr(llvm::CloneModule(*cpu->mod));
-	EngineBuilder builder{std::move(module_ptr)};
+	EngineBuilder builder{std::move(mod_ptr)};
 	builder.setEngineKind(EngineKind::Kind::JIT);
 	cpu->exec_engine = builder.create();
 	assert(cpu->exec_engine != NULL);
