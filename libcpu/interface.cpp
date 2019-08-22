@@ -101,7 +101,6 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
-	llvm::InitializeNativeTargetAsmParser();
 
 	cpu = new cpu_t();
 	assert(cpu != NULL);
@@ -209,10 +208,10 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// init LLVM
-	std::unique_ptr<Module> mod_ptr(new Module(cpu->info.name, _CTX()));
-	cpu->mod = mod_ptr.get();
+	std::unique_ptr<llvm::Module> module_ptr(new Module(cpu->info.name, _CTX()));
+	cpu->mod = module_ptr.get();
 	assert(cpu->mod != NULL);
-	EngineBuilder builder{std::move(mod_ptr)};
+	EngineBuilder builder{std::move(module_ptr)};
 	builder.setEngineKind(EngineKind::Kind::JIT);
 	cpu->exec_engine = builder.create();
 	assert(cpu->exec_engine != NULL);
@@ -344,8 +343,9 @@ cpu_translate_function(cpu_t *cpu)
 
 	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
-	cpu->exec_engine->finalizeObject();
-	cpu->fp[cpu->functions] = cpu->exec_engine->getPointerToFunction(cpu->cur_func);
+	auto func_name = cpu->cur_func->getName();
+	auto fp = reinterpret_cast<void*>(cpu->exec_engine->getFunctionAddress(func_name));
+	cpu->fp[cpu->functions] = fp;
 	assert(cpu->fp[cpu->functions] != NULL);
 	update_timing(cpu, TIMER_BE, false);
 	LOG("done.\n");
