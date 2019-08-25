@@ -152,6 +152,35 @@ jit_helper::get_exec_engine()
 	}
 }
 
+void
+jit_helper::erase_exec_engine(Function *fn)
+{
+	size_t pos = 0;
+	std::vector<Module *>::iterator module_it = mod.end();
+	std::vector<ExecutionEngine *>::iterator exec_engine_it = exec_engine.end();
+	for (auto module : mod) {
+		Function *ptr = module->getFunction(fn->getName());
+		if (ptr) {
+			module_it = mod.begin() + pos;
+		}
+		pos++;
+	}
+	assert(module_it != mod.end());
+	pos = 0;
+	for (auto engine : exec_engine) {
+		void *ptr = engine->getPointerToFunction(fn);
+		if (ptr) {
+			exec_engine_it = exec_engine.begin() + pos;
+		}
+		pos++;
+	}
+	assert(exec_engine_it != exec_engine.end());
+	fn->eraseFromParent();
+	delete *exec_engine_it;
+	exec_engine.erase(exec_engine_it);
+	mod.erase(module_it);
+}
+
 void *
 jit_helper::get_fn_ptr(const char *name)
 {
@@ -485,20 +514,16 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 		}
 	}
 }
-//printf("%d\n", __LINE__);
 
 void
 cpu_flush(cpu_t *cpu)
 {
-	cpu->cur_func->eraseFromParent();
+	cpu->jit->erase_exec_engine(cpu->cur_func);
 
 	cpu->functions = 0;
 
 	// reset bb caching mapping
 	cpu->func_bb.clear();
-
-//	delete cpu->mod;
-//	cpu->mod = NULL;
 }
 
 void
@@ -509,4 +534,3 @@ cpu_print_statistics(cpu_t *cpu)
 	printf("be  = %8" PRId64 "\n", cpu->timer_total[TIMER_BE]);
 	printf("run = %8" PRId64 "\n", cpu->timer_total[TIMER_RUN]);
 }
-//printf("%s:%d\n", __func__, __LINE__);

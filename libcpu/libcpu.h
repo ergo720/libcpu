@@ -170,6 +170,7 @@ public:
 	LLVMContext *get_ctx() { return ctx; }
 	Module *get_module(const char *name = NULL);
 	ExecutionEngine *get_exec_engine();
+	void erase_exec_engine(Function *fn);
 	void *get_fn_ptr(const char *name);
 	std::string generate_unique_name(const char *name);
 private:
