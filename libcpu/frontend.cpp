@@ -277,21 +277,21 @@ Value *
 arch_bswap(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 	std::vector<Type *> arg_type;
 	arg_type.push_back(getIntegerType(width));
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::bswap, arg_type), v, "", bb);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->jit->get_module(), Intrinsic::bswap, arg_type), v, "", bb);
 }
 
 Value *
 arch_ctlz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 	std::vector<Type *> arg_type;
 	arg_type.push_back(getIntegerType(width));
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::ctlz, arg_type), v, "", bb);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->jit->get_module(), Intrinsic::ctlz, arg_type), v, "", bb);
 }
 
 Value *
 arch_cttz(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 	std::vector<Type *> arg_type;
 	arg_type.push_back(getIntegerType(width));
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::cttz, arg_type), v, "", bb);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->jit->get_module(), Intrinsic::cttz, arg_type), v, "", bb);
 }
 
 // complex operations
@@ -432,7 +432,7 @@ Value *
 arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 	std::vector<Type *> arg_type;
 	arg_type.push_back(getFloatType(width));
-	return CallInst::Create(Intrinsic::getDeclaration(cpu->mod, Intrinsic::sqrt, arg_type), v, "", bb);
+	return CallInst::Create(Intrinsic::getDeclaration(cpu->jit->get_module(), Intrinsic::sqrt, arg_type), v, "", bb);
 }
 
 // Invoke debug_function
@@ -443,7 +443,7 @@ arch_debug_me(cpu_t *cpu, BasicBlock *bb)
 	if (cpu->ptr_func_debug == NULL)
 		return;
 
-	IntegerType *intptr_type = cpu->exec_engine->getDataLayout().getIntPtrType(_CTX());
+	IntegerType *intptr_type = cpu->jit->get_exec_engine()->getDataLayout().getIntPtrType(_CTX());
 	Constant *v_cpu = ConstantInt::get(intptr_type, (uintptr_t)cpu);
 	Value *v_cpu_ptr = ConstantExpr::getIntToPtr(v_cpu, PointerType::getUnqual(intptr_type));
 

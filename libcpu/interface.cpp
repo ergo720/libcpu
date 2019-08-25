@@ -91,6 +91,84 @@ is_valid_vr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 }
 
 //////////////////////////////////////////////////////////////////////
+// jit_helper_t
+//////////////////////////////////////////////////////////////////////
+
+jit_helper::~jit_helper()
+{
+	for (auto engine : exec_engine) {
+		delete engine;
+	}
+	if (ctx) {
+		delete ctx;
+		ctx = NULL;
+	}
+}
+
+std::string
+jit_helper::generate_unique_name(const char *name)
+{
+	// XXX this is pretty dumb, but for now it will do it
+	static unsigned long long idx = 0;
+	char str[50];
+	snprintf(str, sizeof(str), "%s_%" PRIu64, name, idx);
+	idx++;
+	return str;
+}
+
+Module *
+jit_helper::get_module(const char *name)
+{
+	if (current_module) {
+		return current_module;
+	}
+	else if (name != NULL) {
+		current_module = new Module(generate_unique_name(name), *ctx);
+		assert(current_module != NULL);
+		mod.push_back(current_module);
+		return current_module;
+	}
+	else {
+		return NULL;
+	}
+}
+
+ExecutionEngine *
+jit_helper::get_exec_engine()
+{
+	if (current_exec_engine) {
+		return current_exec_engine;
+	}
+	else if (current_module) {
+		EngineBuilder builder(std::move(std::unique_ptr<llvm::Module> (current_module)));
+		builder.setEngineKind(EngineKind::Kind::JIT);
+		current_exec_engine = builder.create();
+		assert(current_exec_engine != NULL);
+		exec_engine.push_back(current_exec_engine);
+		return current_exec_engine;
+	}
+	else {
+		return NULL;
+	}
+}
+
+void *
+jit_helper::get_fn_ptr(const char *name)
+{
+	if (current_module && current_exec_engine) {
+		uint64_t addr;
+		current_exec_engine->finalizeObject();
+		addr = current_exec_engine->getFunctionAddress(name);
+		current_module = NULL;
+		current_exec_engine = NULL;
+		return (void *)addr;
+	}
+	else {
+		return NULL;
+	}
+}
+
+//////////////////////////////////////////////////////////////////////
 // cpu_t
 //////////////////////////////////////////////////////////////////////
 
@@ -105,7 +183,6 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu = new cpu_t();
 	assert(cpu != NULL);
 
-	cpu->ctx = new LLVMContext();
 	cpu->info.type = arch;
 	cpu->info.name = "noname";
 	cpu->info.common_flags = flags;
@@ -208,17 +285,12 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// init LLVM
-	std::unique_ptr<llvm::Module> module_ptr(new Module(cpu->info.name, _CTX()));
-	cpu->mod = module_ptr.get();
-	assert(cpu->mod != NULL);
-	EngineBuilder builder{std::move(module_ptr)};
-	builder.setEngineKind(EngineKind::Kind::JIT);
-	cpu->exec_engine = builder.create();
-	assert(cpu->exec_engine != NULL);
+	cpu->jit = new jit_helper_t(new LLVMContext);
+	cpu->jit->get_module(cpu->info.name);
 
 	// check if FP80 and FP128 are supported by this architecture.
 	// XXX there is a better way to do this?
-	std::string data_layout = cpu->exec_engine->getDataLayout().getStringRepresentation();
+	std::string data_layout = cpu->jit->get_exec_engine()->getDataLayout().getStringRepresentation();
 	if (data_layout.find("f80") != std::string::npos) {
 		LOG("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
@@ -229,7 +301,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// check if we need to swap guest memory.
-	if (cpu->exec_engine->getDataLayout().isLittleEndian()
+	if (cpu->jit->get_exec_engine()->getDataLayout().isLittleEndian()
 			^ IS_LITTLE_ENDIAN(cpu))
 		cpu->flags |= CPU_FLAG_SWAPMEM;
 
@@ -246,14 +318,12 @@ cpu_free(cpu_t *cpu)
 {
 	if (cpu->f.done != NULL)
 		cpu->f.done(cpu);
-	if (cpu->exec_engine != NULL) {
+	if (cpu->jit != NULL) {
 		if (cpu->cur_func != NULL) {
 			cpu->cur_func->eraseFromParent();
 		}
-		delete cpu->exec_engine;
+		delete cpu->jit;
 	}
-	if (cpu->ctx != NULL)
-		delete cpu->ctx;
 	if (cpu->ptr_FLAG != NULL)
 		free(cpu->ptr_FLAG);
 	if (cpu->in_ptr_fpr != NULL)
@@ -331,22 +401,21 @@ cpu_translate_function(cpu_t *cpu)
 	verifyFunction(*cpu->cur_func, &llvm::errs());
 
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
-		cpu->mod->print(llvm::errs(), nullptr);
+		cpu->jit->get_module()->print(llvm::errs(), NULL);
 
 	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		LOG("*** Optimizing...");
 		optimize(cpu);
 		LOG("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
-			cpu->mod->print(llvm::errs(), nullptr);
+			cpu->jit->get_module()->print(llvm::errs(), NULL);
 	}
 
 	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
-	auto func_name = cpu->cur_func->getName();
-	auto fp = reinterpret_cast<void*>(cpu->exec_engine->getFunctionAddress(func_name));
+	auto fp = (void*)(cpu->jit->get_fn_ptr(cpu->cur_func->getName().data()));
 	cpu->fp[cpu->functions] = fp;
-	assert(cpu->fp[cpu->functions] != NULL);
+	assert(fp != NULL);
 	update_timing(cpu, TIMER_BE, false);
 	LOG("done.\n");
 

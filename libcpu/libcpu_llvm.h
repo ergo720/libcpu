@@ -9,14 +9,14 @@
 // LLVM Helpers
 //////////////////////////////////////////////////////////////////////
 
-#define _CTX() (*cpu->ctx)
+#define _CTX() (*cpu->jit->get_ctx())
 
 #define XgetType(x) (Type::get##x(_CTX()))
 #define getIntegerType(x) (IntegerType::get(_CTX(), x))
 #define getNamedStructType(x, ...) (StructType::create(_CTX(), x, name,    \
 					       #__VA_ARGS__))
 
-#define getFloatType(bits) getFloatType0(*cpu->ctx, bits)
+#define getFloatType(bits) getFloatType0(_CTX(), bits)
 
 static inline Type *getFloatType0(LLVMContext &ctx, unsigned bits)
 {

@@ -178,7 +178,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 	emit_decode_fp_reg_helper(cpu, bb);
 
 	// PC pointer.
-	IntegerType *intptr_type = cpu->exec_engine->getDataLayout().getIntPtrType(_CTX());
+	IntegerType *intptr_type = cpu->jit->get_exec_engine()->getDataLayout().getIntPtrType(_CTX());
 	Constant *v_pc = ConstantInt::get(intptr_type, (uintptr_t)cpu->rf.pc);
 	cpu->ptr_PC = ConstantExpr::getIntToPtr(v_pc, PointerType::getUnqual(getIntegerType(cpu->info.address_size)));
 	cpu->ptr_PC->setName("pc");
@@ -288,6 +288,10 @@ cpu_create_function(cpu_t *cpu, const char *name,
 {
 	Function *func;
 
+	// Force generating a new module if the current one was already jitted
+	cpu->jit->get_module(cpu->info.name);
+	cpu->jit->get_exec_engine();
+
 	// Type Definitions
 	// - struct reg
 	StructType *type_struct_reg_t = get_struct_reg(cpu, "struct.reg_t");
@@ -300,7 +304,7 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	// - uint8_t *
 	PointerType *type_pi8 = PointerType::get(getIntegerType(8), 0);
 	// - intptr *
-	PointerType *type_intptr = PointerType::get(cpu->exec_engine->getDataLayout().getIntPtrType(_CTX()), 0);
+	PointerType *type_intptr = PointerType::get(cpu->jit->get_exec_engine()->getDataLayout().getIntPtrType(_CTX()), 0);
 	// - (*f)(cpu_t *) [debug_function() function pointer]
 	std::vector<Type*>type_func_callout_args;
 	type_func_callout_args.push_back(type_intptr);	/* intptr *cpu */
@@ -325,7 +329,8 @@ cpu_create_function(cpu_t *cpu, const char *name,
 	func = Function::Create(
 		type_func,				/* Type */
 		GlobalValue::ExternalLinkage,	/* Linkage */
-		name, cpu->mod);				/* Name */
+		cpu->jit->generate_unique_name(name),	/* Name */
+		cpu->jit->get_module());
 	func->setCallingConv(CallingConv::C);
 	func->addAttribute(1U, Attribute::NoCapture);
 	func->addAttribute(4294967295U, Attribute::NoUnwind);

@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <map>
+#include <string>
+#include <vector>
 
 namespace llvm {
 class LLVMContext;
@@ -161,6 +163,23 @@ typedef struct cpu_register_layout {
 	char const *name;
 } cpu_register_layout_t;
 
+typedef struct jit_helper {
+public:
+	jit_helper(LLVMContext *context) : ctx(context), current_module(NULL), current_exec_engine(NULL) {};
+	~jit_helper();
+	LLVMContext *get_ctx() { return ctx; }
+	Module *get_module(const char *name = NULL);
+	ExecutionEngine *get_exec_engine();
+	void *get_fn_ptr(const char *name);
+	std::string generate_unique_name(const char *name);
+private:
+	Module *current_module;
+	ExecutionEngine *current_exec_engine;
+	LLVMContext *ctx;
+	std::vector<Module *> mod;
+	std::vector<ExecutionEngine *> exec_engine;
+} jit_helper_t;
+
 typedef struct cpu_archinfo {
 	cpu_arch_t type;
 	
@@ -208,6 +227,7 @@ typedef struct cpu {
 	cpu_archinfo_t info;
 	cpu_archrf_t rf;
 	arch_func_t f;
+	jit_helper_t *jit;
 
 	funcbb_map func_bb; // faster bb lookup
 
@@ -223,13 +243,10 @@ typedef struct cpu {
 	FILE *file_entries;
 	tag_t *tag;
 	bool tags_dirty;
-	Module *mod;
 	void *fp[1024];
 	Function *func[1024];
 	Function *cur_func;
 	uint32_t functions;
-	LLVMContext *ctx;
-	ExecutionEngine *exec_engine;
 	uint8_t *RAM;
 	Value *ptr_PC;
 	Value *ptr_RAM;

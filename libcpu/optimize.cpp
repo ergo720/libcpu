@@ -17,7 +17,7 @@
 void
 optimize(cpu_t *cpu)
 {
-	llvm::legacy::FunctionPassManager pm = llvm::legacy::FunctionPassManager(cpu->mod);
+	llvm::legacy::FunctionPassManager pm = llvm::legacy::FunctionPassManager(cpu->jit->get_module());
 
 	pm.add(createPromoteMemoryToRegisterPass());
 	pm.add(createInstructionCombiningPass());
