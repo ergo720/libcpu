@@ -27,22 +27,11 @@ if (MSVC)
   set(LLVM_COMPILE_FLAGS "")
   set(LLVM_LDFLAGS "")
 
-  # This is simply the output of llvm-config.exe --libnames all. Need to update this when linking against a new version of llvm
-  set(LLVM_LIBS_CORE LLVMLTO.lib LLVMPasses.lib LLVMObjCARCOpts.lib LLVMMIRParser.lib LLVMSymbolize.lib LLVMDebugInfoPDB.lib LLVMDebugInfoDWARF.lib LLVMCoverage.lib LLVMMCA.lib LLVMTableGen.lib LLVMDlltoolDriver.lib
-  LLVMXRay.lib LLVMOrcJIT.lib LLVMXCoreDisassembler.lib LLVMXCoreCodeGen.lib LLVMXCoreDesc.lib LLVMXCoreInfo.lib LLVMXCoreAsmPrinter.lib LLVMWebAssemblyDisassembler.lib LLVMWebAssemblyCodeGen.lib LLVMWebAssemblyDesc.lib
-  LLVMWebAssemblyAsmPrinter.lib LLVMWebAssemblyAsmParser.lib LLVMWebAssemblyInfo.lib LLVMSystemZDisassembler.lib LLVMSystemZCodeGen.lib LLVMSystemZAsmParser.lib LLVMSystemZDesc.lib LLVMSystemZInfo.lib
-  LLVMSystemZAsmPrinter.lib LLVMSparcDisassembler.lib LLVMSparcCodeGen.lib LLVMSparcAsmParser.lib LLVMSparcDesc.lib LLVMSparcInfo.lib LLVMSparcAsmPrinter.lib LLVMPowerPCDisassembler.lib LLVMPowerPCCodeGen.lib
-  LLVMPowerPCAsmParser.lib LLVMPowerPCDesc.lib LLVMPowerPCInfo.lib LLVMPowerPCAsmPrinter.lib LLVMNVPTXCodeGen.lib LLVMNVPTXDesc.lib LLVMNVPTXInfo.lib LLVMNVPTXAsmPrinter.lib LLVMMSP430Disassembler.lib LLVMMSP430CodeGen.lib
-  LLVMMSP430AsmParser.lib LLVMMSP430Desc.lib LLVMMSP430Info.lib LLVMMSP430AsmPrinter.lib LLVMMipsDisassembler.lib LLVMMipsCodeGen.lib LLVMMipsAsmParser.lib LLVMMipsDesc.lib LLVMMipsInfo.lib LLVMMipsAsmPrinter.lib
-  LLVMLanaiDisassembler.lib LLVMLanaiCodeGen.lib LLVMLanaiAsmParser.lib LLVMLanaiDesc.lib LLVMLanaiAsmPrinter.lib LLVMLanaiInfo.lib LLVMHexagonDisassembler.lib LLVMHexagonCodeGen.lib LLVMHexagonAsmParser.lib
-  LLVMHexagonDesc.lib LLVMHexagonInfo.lib LLVMBPFDisassembler.lib LLVMBPFCodeGen.lib LLVMBPFAsmParser.lib LLVMBPFDesc.lib LLVMBPFInfo.lib LLVMBPFAsmPrinter.lib LLVMARMDisassembler.lib LLVMARMCodeGen.lib
-  LLVMARMAsmParser.lib LLVMARMDesc.lib LLVMARMInfo.lib LLVMARMAsmPrinter.lib LLVMARMUtils.lib LLVMAMDGPUDisassembler.lib LLVMAMDGPUCodeGen.lib LLVMAMDGPUAsmParser.lib LLVMAMDGPUDesc.lib LLVMAMDGPUInfo.lib
-  LLVMAMDGPUAsmPrinter.lib LLVMAMDGPUUtils.lib LLVMAArch64Disassembler.lib LLVMAArch64CodeGen.lib LLVMAArch64AsmParser.lib LLVMAArch64Desc.lib LLVMAArch64Info.lib LLVMAArch64AsmPrinter.lib LLVMAArch64Utils.lib
-  LLVMObjectYAML.lib LLVMLibDriver.lib LLVMOption.lib LLVMOptRemarks.lib LLVMWindowsManifest.lib LLVMTextAPI.lib LLVMFuzzMutate.lib LLVMX86Disassembler.lib LLVMX86AsmParser.lib LLVMX86CodeGen.lib LLVMGlobalISel.lib
-  LLVMSelectionDAG.lib LLVMAsmPrinter.lib LLVMX86Desc.lib LLVMMCDisassembler.lib LLVMX86Info.lib LLVMX86AsmPrinter.lib LLVMX86Utils.lib LLVMMCJIT.lib LLVMLineEditor.lib LLVMInterpreter.lib LLVMExecutionEngine.lib
-  LLVMRuntimeDyld.lib LLVMCodeGen.lib LLVMTarget.lib LLVMCoroutines.lib LLVMipo.lib LLVMInstrumentation.lib LLVMVectorize.lib LLVMScalarOpts.lib LLVMLinker.lib LLVMIRReader.lib LLVMAsmParser.lib LLVMInstCombine.lib
-  LLVMBitWriter.lib LLVMAggressiveInstCombine.lib LLVMTransformUtils.lib LLVMAnalysis.lib LLVMProfileData.lib LLVMObject.lib LLVMMCParser.lib LLVMMC.lib LLVMDebugInfoCodeView.lib LLVMDebugInfoMSF.lib LLVMBitReader.lib
-  LLVMCore.lib LLVMBinaryFormat.lib LLVMSupport.lib LLVMDemangle.lib)
+  set(LLVM_LIBS_CORE LLVMX86Disassembler.lib LLVMX86AsmParser.lib LLVMX86CodeGen.lib LLVMGlobalISel.lib LLVMSelectionDAG.lib LLVMAsmPrinter.lib LLVMCodeGen.lib LLVMTarget.lib
+  LLVMScalarOpts.lib LLVMInstCombine.lib LLVMAggressiveInstCombine.lib LLVMTransformUtils.lib LLVMBitWriter.lib LLVMAnalysis.lib LLVMProfileData.lib LLVMX86Desc.lib LLVMObject.lib
+  LLVMMCParser.lib LLVMBitReader.lib LLVMCore.lib LLVMMCDisassembler.lib LLVMX86Info.lib LLVMX86AsmPrinter.lib LLVMMC.lib LLVMDebugInfoCodeView.lib LLVMDebugInfoMSF.lib
+  LLVMBinaryFormat.lib LLVMX86Utils.lib LLVMSupport.lib LLVMDemangle.lib LLVMMCJIT.lib LLVMOrcJIT.lib LLVMExecutionEngine.lib LLVMRuntimeDyld.lib LLVMipo.lib LLVMObjCARCOpts.lib
+  LLVMInstrumentation.lib LLVMVectorize.lib LLVMIRReader.lib LLVMLinker.lib LLVMAsmParser.lib)
   set(LLVM_LIBS_JIT "")
   set(LLVM_LIBS_JIT_OBJECTS "")
 endif (MSVC)
