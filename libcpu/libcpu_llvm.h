@@ -9,7 +9,7 @@
 // LLVM Helpers
 //////////////////////////////////////////////////////////////////////
 
-#define _CTX() (*cpu->jit->get_ctx())
+#define _CTX() (*cpu->ctx[cpu->functions])
 
 #define XgetType(x) (Type::get##x(_CTX()))
 #define getIntegerType(x) (IntegerType::get(_CTX(), x))

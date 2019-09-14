@@ -16,11 +16,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-#if defined _WIN32
-#include "llvm/ExecutionEngine/MCJIT.h"
-//#include "llvm/ExecutionEngine/OrcMCJITReplacement.h"
-//#include "llvm/ExecutionEngine/Interpreter.h"
-#endif
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 /* project global headers */
 #include "libcpu.h"
@@ -91,113 +87,6 @@ is_valid_vr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 }
 
 //////////////////////////////////////////////////////////////////////
-// jit_helper_t
-//////////////////////////////////////////////////////////////////////
-
-jit_helper::~jit_helper()
-{
-	for (auto engine : exec_engine) {
-		delete engine;
-	}
-	if (ctx) {
-		delete ctx;
-		ctx = NULL;
-	}
-}
-
-std::string
-jit_helper::generate_unique_name(const char *name)
-{
-	// XXX this is pretty dumb, but for now it will do it
-	static unsigned long long idx = 0;
-	char str[50];
-	snprintf(str, sizeof(str), "%s_%" PRIu64, name, idx);
-	idx++;
-	return str;
-}
-
-Module *
-jit_helper::get_module(const char *name)
-{
-	if (current_module) {
-		return current_module;
-	}
-	else if (name != NULL) {
-		current_module = new Module(generate_unique_name(name), *ctx);
-		assert(current_module != NULL);
-		mod.push_back(current_module);
-		return current_module;
-	}
-	else {
-		return NULL;
-	}
-}
-
-ExecutionEngine *
-jit_helper::get_exec_engine()
-{
-	if (current_exec_engine) {
-		return current_exec_engine;
-	}
-	else if (current_module) {
-		EngineBuilder builder(std::move(std::unique_ptr<llvm::Module> (current_module)));
-		builder.setEngineKind(EngineKind::Kind::JIT);
-		current_exec_engine = builder.create();
-		assert(current_exec_engine != NULL);
-		exec_engine.push_back(current_exec_engine);
-		return current_exec_engine;
-	}
-	else {
-		return NULL;
-	}
-}
-
-void
-jit_helper::erase_exec_engine(Function *fn)
-{
-	size_t pos = 0;
-	std::vector<Module *>::iterator module_it = mod.end();
-	std::vector<ExecutionEngine *>::iterator exec_engine_it = exec_engine.end();
-	for (auto module : mod) {
-		Function *ptr = module->getFunction(fn->getName());
-		if (ptr) {
-			module_it = mod.begin() + pos;
-		}
-		pos++;
-	}
-	assert(module_it != mod.end());
-	pos = 0;
-	for (auto engine : exec_engine) {
-		void *ptr = engine->getPointerToFunction(fn);
-		if (ptr) {
-			exec_engine_it = exec_engine.begin() + pos;
-		}
-		pos++;
-	}
-	assert(exec_engine_it != exec_engine.end());
-	fn->eraseFromParent();
-	delete *exec_engine_it;
-	exec_engine.erase(exec_engine_it);
-	mod.erase(module_it);
-}
-
-void *
-jit_helper::get_fn_ptr(const char *name)
-{
-	if (current_module && current_exec_engine) {
-		uint64_t addr;
-		current_exec_engine->finalizeObject();
-		addr = current_exec_engine->getFunctionAddress(name);
-		current_module = NULL;
-		current_exec_engine = NULL;
-		return (void *)addr;
-	}
-	else {
-		return NULL;
-	}
-}
-
-//////////////////////////////////////////////////////////////////////
 // cpu_t
 //////////////////////////////////////////////////////////////////////
 
@@ -205,9 +94,6 @@ cpu_t *
 cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 {
 	cpu_t *cpu;
-
-	llvm::InitializeNativeTarget();
-	llvm::InitializeNativeTargetAsmPrinter();
 
 	cpu = new cpu_t();
 	assert(cpu != NULL);
@@ -314,12 +200,41 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// init LLVM
-	cpu->jit = new jit_helper_t(new LLVMContext);
-	cpu->jit->get_module(cpu->info.name);
+	InitializeNativeTarget();
+	InitializeNativeTargetAsmParser();
+	InitializeNativeTargetAsmPrinter();
+	cpu->ctx[cpu->functions] = new LLVMContext();
+	assert(cpu->ctx != NULL);
+	cpu->mod[cpu->functions] = new Module(cpu->info.name, _CTX());
+	assert(cpu->mod[cpu->functions] != NULL);
+	const auto& tt = cpu->mod[cpu->functions]->getTargetTriple();
+	orc::JITTargetMachineBuilder jtmb =
+		tt.empty() ? *orc::JITTargetMachineBuilder::detectHost()
+		: orc::JITTargetMachineBuilder(Triple(tt));
+	SubtargetFeatures features;
+	StringMap<bool> host_features;
+	if (sys::getHostCPUFeatures(host_features))
+		for (auto &F : host_features) {
+			features.AddFeature(F.first(), F.second);
+		}
+	jtmb.setCPU(sys::getHostCPUName())
+		.addFeatures(features.getFeatures())
+		.setRelocationModel(None)
+		.setCodeModel(None);
+	auto dl = jtmb.getDefaultDataLayoutForTarget();
+	assert(dl);
+	cpu->dl = new DataLayout(*dl);
+	// XXX use sys::getHostNumPhysicalCores from LLVM to exclude logical cores?
+	auto lazyjit = orc::LLLazyJIT::Create(std::move(jtmb), *dl, NULL, std::thread::hardware_concurrency());
+	assert(lazyjit);
+	cpu->jit = std::move(*lazyjit);
+	cpu->jit->setPartitionFunction(orc::CompileOnDemandLayer::compileRequested);
+	cpu->jit->getMainJITDylib().setGenerator(
+		*orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(*dl));
 
 	// check if FP80 and FP128 are supported by this architecture.
 	// XXX there is a better way to do this?
-	std::string data_layout = cpu->jit->get_exec_engine()->getDataLayout().getStringRepresentation();
+	std::string data_layout = cpu->dl->getStringRepresentation();
 	if (data_layout.find("f80") != std::string::npos) {
 		LOG("INFO: FP80 supported.\n");
 		cpu->flags |= CPU_FLAG_FP80;
@@ -330,7 +245,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	}
 
 	// check if we need to swap guest memory.
-	if (cpu->jit->get_exec_engine()->getDataLayout().isLittleEndian()
+	if (cpu->dl->isLittleEndian()
 			^ IS_LITTLE_ENDIAN(cpu))
 		cpu->flags |= CPU_FLAG_SWAPMEM;
 
@@ -348,11 +263,14 @@ cpu_free(cpu_t *cpu)
 	if (cpu->f.done != NULL)
 		cpu->f.done(cpu);
 	if (cpu->jit != NULL) {
-		if (cpu->cur_func != NULL) {
-			cpu->cur_func->eraseFromParent();
-		}
-		delete cpu->jit;
+		//if (cpu->cur_func != NULL) {
+		//	cpu->cur_func->eraseFromParent();
+		//}
+		llvm_shutdown();
+		cpu->jit.reset(NULL);
 	}
+	if (cpu->dl != NULL)
+		delete cpu->dl;
 	if (cpu->ptr_FLAG != NULL)
 		free(cpu->ptr_FLAG);
 	if (cpu->in_ptr_fpr != NULL)
@@ -408,8 +326,17 @@ cpu_translate_function(cpu_t *cpu)
 {
 	BasicBlock *bb_ret, *bb_trap, *label_entry, *bb_start;
 
+	if (cpu->ctx[cpu->functions] == NULL) {
+		cpu->ctx[cpu->functions] = new LLVMContext();
+		assert(cpu->ctx[cpu->functions] != NULL);
+	}
+	if (cpu->mod[cpu->functions] == NULL) {
+		cpu->mod[cpu->functions] = new Module(cpu->info.name, _CTX());
+		assert(cpu->mod[cpu->functions] != NULL);
+	}
+
 	/* create function and fill it with std basic blocks */
-	cpu->cur_func = cpu_create_function(cpu, "jitmain", &bb_ret, &bb_trap, &label_entry);
+	cpu->cur_func = cpu_create_function(cpu, std::to_string(cpu->functions).c_str(), &bb_ret, &bb_trap, &label_entry);
 	cpu->func[cpu->functions] = cpu->cur_func;
 
 	/* TRANSLATE! */
@@ -430,19 +357,23 @@ cpu_translate_function(cpu_t *cpu)
 	verifyFunction(*cpu->cur_func, &llvm::errs());
 
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
-		cpu->jit->get_module()->print(llvm::errs(), NULL);
+		cpu->mod[cpu->functions]->print(llvm::errs(), NULL);
 
 	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		LOG("*** Optimizing...");
 		optimize(cpu);
 		LOG("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
-			cpu->jit->get_module()->print(llvm::errs(), NULL);
+			cpu->mod[cpu->functions]->print(llvm::errs(), NULL);
 	}
 
 	LOG("*** Translating...");
 	update_timing(cpu, TIMER_BE, true);
-	auto fp = (void*)(cpu->jit->get_fn_ptr(cpu->cur_func->getName().data()));
+	orc::ThreadSafeContext tsc(std::unique_ptr<LLVMContext>(cpu->ctx[cpu->functions]));
+	orc::ThreadSafeModule tsm(std::unique_ptr<llvm::Module>(cpu->mod[cpu->functions]), tsc);
+	auto err = cpu->jit->addLazyIRModule(std::move(tsm));
+	assert(!err);
+	auto fp = (void*)(cpu->jit->lookup(cpu->cur_func->getName())->getAddress());
 	cpu->fp[cpu->functions] = fp;
 	assert(fp != NULL);
 	update_timing(cpu, TIMER_BE, false);
@@ -496,6 +427,8 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 			update_timing(cpu, TIMER_RUN, true);
 			breakpoint();
 			ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
+			cpu->ctx[i] = NULL;
+			cpu->mod[i] = NULL;
 			update_timing(cpu, TIMER_RUN, false);
 			pc = cpu->f.get_pc(cpu, cpu->rf.grf);
 			if (ret != JIT_RETURN_FUNCNOTFOUND)
@@ -518,7 +451,7 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 void
 cpu_flush(cpu_t *cpu)
 {
-	cpu->jit->erase_exec_engine(cpu->cur_func);
+	cpu->cur_func->eraseFromParent();
 
 	cpu->functions = 0;
 

@@ -8,8 +8,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <map>
-#include <string>
-#include <vector>
+#include <memory>
 
 namespace llvm {
 class LLVMContext;
@@ -20,6 +19,10 @@ class Module;
 class PointerType;
 class StructType;
 class Value;
+class DataLayout;
+namespace orc {
+	class LLLazyJIT;
+}
 }
 
 #include "types.h"
@@ -163,24 +166,6 @@ typedef struct cpu_register_layout {
 	char const *name;
 } cpu_register_layout_t;
 
-typedef struct jit_helper {
-public:
-	jit_helper(LLVMContext *context) : ctx(context), current_module(NULL), current_exec_engine(NULL) {};
-	~jit_helper();
-	LLVMContext *get_ctx() { return ctx; }
-	Module *get_module(const char *name = NULL);
-	ExecutionEngine *get_exec_engine();
-	void erase_exec_engine(Function *fn);
-	void *get_fn_ptr(const char *name);
-	std::string generate_unique_name(const char *name);
-private:
-	Module *current_module;
-	ExecutionEngine *current_exec_engine;
-	LLVMContext *ctx;
-	std::vector<Module *> mod;
-	std::vector<ExecutionEngine *> exec_engine;
-} jit_helper_t;
-
 typedef struct cpu_archinfo {
 	cpu_arch_t type;
 	
@@ -228,7 +213,6 @@ typedef struct cpu {
 	cpu_archinfo_t info;
 	cpu_archrf_t rf;
 	arch_func_t f;
-	jit_helper_t *jit;
 
 	funcbb_map func_bb; // faster bb lookup
 
@@ -276,6 +260,12 @@ typedef struct cpu {
 	uint64_t timer_start[TIMER_COUNT];
 
 	void *feptr; /* This pointer can be used freely by the frontend. */
+
+	/* LLVM specific variables */
+	std::unique_ptr<orc::LLLazyJIT> jit;
+	LLVMContext *ctx[1024];
+	Module *mod[1024];
+	DataLayout *dl;
 } cpu_t;
 
 enum {
