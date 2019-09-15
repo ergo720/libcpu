@@ -25,7 +25,7 @@
 #define X86_PREFIX_INDEX 58:3 // [58-60] - indexes in prefix_values[]
 #define X86_PREFIX_VALUE 55:3 // [55-57] - writes to prefix_values[]
 #define X86_DECODE_GROUP 57:4 // [57-60] - indexes in decode_tables[]
-#define X86_DIFF_SYNTAX 56:8 // [56-60] - indexes in diff_syntax_opcodes[]
+#define X86_DIFF_SYNTAX 56:5 // [56-60] - indexes in diff_syntax_opcodes[]
 
 #define X86_DECODE_CLASS_INVALID 0
 #define X86_DECODE_CLASS_PREFIX 1 // prefix bytes, fetched in arch_x86_decode_instr()
@@ -1307,7 +1307,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	instr->opcode = opcode;
 	if (decode_group <= 1) { // Did we read from decode_table_one or decode_table_two?
 		instr->opcode_byte = instr_byte;
-		instr->flags = decode; // & ~GET_MASK(X86_OPCODE); // Doesn't seem necessary (opcode bits aren't checked)
+		instr->flags |= decode & ~GET_MASK(X86_OPCODE);
 		if (instr->flags & MOD_RM) {
 			decode_modrm_fields(instr, read_u8(RAM, &pc));
 			decode_modrm_addr_modes(instr);

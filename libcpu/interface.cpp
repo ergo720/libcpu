@@ -204,7 +204,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	InitializeNativeTargetAsmParser();
 	InitializeNativeTargetAsmPrinter();
 	cpu->ctx[cpu->functions] = new LLVMContext();
-	assert(cpu->ctx != NULL);
+	assert(cpu->ctx[cpu->functions] != NULL);
 	cpu->mod[cpu->functions] = new Module(cpu->info.name, _CTX());
 	assert(cpu->mod[cpu->functions] != NULL);
 	const auto& tt = cpu->mod[cpu->functions]->getTargetTriple();
