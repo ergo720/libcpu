@@ -1,12 +1,10 @@
 #define START 0
 #define ENTRY 0
 
-#include "timings.h"
-
 #include <libcpu.h>
-#include "arch/m88k/m88k_isa.h"
-
-#define RET_MAGIC 0x4D495354
+#include <string>
+#include <stdexcept>
+#include <fstream>
 
 static void
 debug_function(cpu_t *cpu)
@@ -20,48 +18,138 @@ debug_function(cpu_t *cpu)
 #define SINGLESTEP_BB	2
 //////////////////////////////////////////////////////////////////////
 
+void print_help()
+{
+	static const char *help =
+"usage: [options] <path of the binary to run>\n\
+options: \n\
+-p         Print llvm IR code\n\
+-i         Use Intel syntax (default is AT&T)\n\
+-c <addr>  Start address of code\n\
+-e <addr>  Address of first instruction\n\
+-s <size>  Size (in bytes) to allocate for RAM\n\
+-h         Print this message\n";
+
+	printf("%s", help);
+}
+
 int
 main(int argc, char **argv)
 {
-	char *executable = "";
+	std::string executable;
 	cpu_arch_t arch;
 	cpu_t *cpu;
 	uint8_t *RAM;
-	FILE *f;
 	size_t ramsize;
+	addr_t code_start, code_entry;
+	size_t length;
 
 	int singlestep = SINGLESTEP_NONE;
 	int log = 1;
 	int print_ir = 0;
 	int intel_syntax = 0;
 
+	ramsize = 1 * 1024 * 1024;
+	arch = CPU_ARCH_X86;
+	code_start = START;
+	code_entry = ENTRY;
+
 	/* parameter parsing */
 	if (argc < 2) {
-		printf("Usage: %s [--print-ir] [--intel] <binary>\n", argv[0]);
+		print_help();
 		return 0;
 	}
 
 	for (int idx = 1; idx < argc; idx++) {
-		char *arg;
-		if (*(arg = argv[idx]) != '-') {
-			executable = arg;
-			continue;
+		try {
+			std::string arg_str(argv[idx]);
+			if (arg_str.size() == 2 && arg_str.front() == '-') {
+				switch (arg_str.at(1))
+				{
+				case 'p':
+					print_ir = 1;
+					break;
+
+				case 'i':
+					intel_syntax = 1;
+					break;
+
+				case 'c':
+					if (++idx == argc || argv[idx][0] == '-') {
+						printf("Missing argument for option \"c\"\n");
+						return 0;
+					}
+					code_start = std::stoull(std::string(argv[idx]), NULL, 0);
+					break;
+
+				case 'e':
+					if (++idx == argc || argv[idx][0] == '-') {
+						printf("Missing argument for option \"e\"\n");
+						return 0;
+					}
+					code_entry = std::stoull(std::string(argv[idx]), NULL, 0);
+					break;
+
+				case 's':
+					if (++idx == argc || argv[idx][0] == '-') {
+						printf("Missing argument for option \"s\"\n");
+						return 0;
+					}
+					ramsize = std::stoull(std::string(argv[idx]), NULL, 0);
+					break;
+
+				case 'h':
+					print_help();
+					return 0;
+
+				default:
+					printf("Unknown option %s\n", arg_str.c_str());
+					print_help();
+					return 0;
+				}
+			}
+			else if ((idx + 1) == argc) {
+					executable = std::move(arg_str);
+					break;
+				}
+			else {
+				printf("Unknown option %s\n", arg_str.c_str());
+				print_help();
+				return 0;
+			}
 		}
-		if (*(arg = ++argv[idx]) == '-') {
-			++arg;
-			if (!strcmp(arg, "print-ir")) {
-				print_ir = 1;
-			}
-			else if (!strcmp(arg, "intel")) {
-				intel_syntax = 1;
-			}
+		/* Handle exceptions thrown by std::stoull */
+		catch (std::exception &e) {
+			printf("Failed to parse addr and/or size arguments. The error was: %s\n", e.what());
+			return 1;
 		}
 	}
 
-	arch = CPU_ARCH_X86;
+	/* load code */
+	std::ifstream ifs(executable, std::ios_base::in | std::ios_base::binary);
+	if (!ifs.is_open()) {
+		printf("Could not open binary file \"%s\"!\n", executable.c_str());
+		return 2;
+	}
+	ifs.seekg(0, ifs.end);
+	length = ifs.tellg();
+	ifs.seekg(0, ifs.beg);
 
-	ramsize = 1*1024*1024;
+	/* Sanity checks */
+	if (length == 0) {
+		printf("Size of binary file \"%s\" detected as zero!\n", executable.c_str());
+		return 2;
+	}
+	else if (length > ramsize) {
+		printf("Size of binary file \"%s\" exceeds size of allocated RAM!\n", executable.c_str());
+		return 2;
+	}
+
 	RAM = (uint8_t*)malloc(ramsize);
+	if (RAM == NULL) {
+		printf("Failed to allocate RAM buffer!\n");
+		return 3;
+	}
 
 	cpu = cpu_new(arch, 0, 0);
 
@@ -77,15 +165,11 @@ main(int argc, char **argv)
 
 	cpu_set_ram(cpu, RAM);
 	
-	/* load code */
-	if (!(f = fopen(executable, "rb"))) {
-		printf("Could not open %s!\n", executable);
-		return 2;
-	}
-	cpu->code_start = START;
-	cpu->code_end = cpu->code_start + (addr_t)fread(&RAM[cpu->code_start], 1, ramsize-(size_t)cpu->code_start, f);
-	fclose(f);
-	cpu->code_entry = cpu->code_start + ENTRY;
+	cpu->code_start = code_start;
+	cpu->code_end = cpu->code_start + (addr_t)length;
+	cpu->code_entry = cpu->code_start + code_entry;
+	ifs.read((char*)&RAM[cpu->code_start], length);
+	ifs.close();
 
 	cpu_tag(cpu, cpu->code_entry);
 

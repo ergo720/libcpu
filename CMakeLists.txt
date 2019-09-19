@@ -31,7 +31,7 @@ ENDIF()
 
 # Add LLVM flags only to C++.
 IF(MSVC)
-SET(CMAKE_CXX_FLAGS "/std:c++17")
+SET(CMAKE_CXX_FLAGS "/std:c++17 /EHsc")
 ELSE(MSVC)
 SET(CMAKE_CXX_FLAGS "-std=c++17")
 ENDIF(MSVC)

@@ -10,6 +10,9 @@
 #include "libcpu.h"
 #include "tag.h"
 #include "sha1.h"
+#include <string>
+#include <sstream>
+#include <iomanip>
 
 /*
  * TODO: on architectures with constant instruction sizes,
@@ -56,7 +59,10 @@ init_tagging(cpu_t *cpu)
 		for (j=0; j<20; j++)
 			sprintf(ascii_digest+strlen(ascii_digest), "%02x", cpu->code_digest[j]);
 		LOG("Code Digest: %s\n", ascii_digest);
-		sprintf(cache_fn, "%slibcpu-%s.entries", get_temp_dir(), ascii_digest);
+		std::stringstream stream;
+		stream << std::setfill('0') << std::setw(sizeof(cpu->code_entry) * 2)
+			<< std::hex << cpu->code_entry;
+		sprintf(cache_fn, "%slibcpu-%s-%s.entries", get_temp_dir(), ascii_digest, stream.str().c_str());
 		
 		cpu->file_entries = NULL;
 		

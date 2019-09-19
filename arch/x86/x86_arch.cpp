@@ -113,6 +113,7 @@ arch_x86_done(cpu_t *cpu)
 {
 	free(cpu->rf.grf);
 	free(cpu->rf.frf);
+	free(cpu->RAM);
 }
 
 static void
