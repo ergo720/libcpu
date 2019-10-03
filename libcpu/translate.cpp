@@ -13,7 +13,7 @@
 #include "basicblock.h"
 /*
  * returns the basic block where code execution continues, or
- * NULL if the instruction always branches away
+ * nullptr if the instruction always branches away
  * (The caller needs this to link the basic block)
  */
 BasicBlock *
@@ -23,8 +23,8 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	BasicBlock *bb_next,	/* non-taken for conditional */
 	BasicBlock *cur_bb)
 {
-	BasicBlock *bb_cond = NULL;
-	BasicBlock *bb_delay = NULL;
+	BasicBlock *bb_cond = nullptr;
+	BasicBlock *bb_delay = nullptr;
 
 	/* create internal basic blocks if needed */
 	if (tag & TAG_CONDITIONAL)
@@ -53,7 +53,7 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 			cpu->f.translate_instr(cpu, pc, cur_bb);
 			BranchInst::Create(bb_target, cur_bb);
 		}
-		return NULL; /* don't link */
+		return nullptr; /* don't link */
 	}
 
 	/* no delay slot */
@@ -74,5 +74,5 @@ translate_instr(cpu_t *cpu, addr_t pc, tag_t tag,
 	if (tag & TAG_CONTINUE)
 		return cur_bb;
 	else
-		return NULL;
+		return nullptr;
 }

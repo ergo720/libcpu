@@ -214,7 +214,7 @@ emit_decode_reg(cpu_t *cpu, BasicBlock *bb)
 	}
 	
 	// frontend specific part
-	if (cpu->f.emit_decode_reg != NULL)
+	if (cpu->f.emit_decode_reg != nullptr)
 		cpu->f.emit_decode_reg(cpu, bb);
 }
 
@@ -259,7 +259,7 @@ static void
 spill_reg_state(cpu_t *cpu, BasicBlock *bb)
 {
 	// frontend specific part.
-	if (cpu->f.spill_reg_state != NULL)
+	if (cpu->f.spill_reg_state != nullptr)
 		cpu->f.spill_reg_state(cpu, bb);
 
 	// flags

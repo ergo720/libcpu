@@ -253,14 +253,14 @@ static const char *check_prefix_override(struct x86_instr *instr)
 		}
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 static const char *add_operand_prefix(struct x86_instr *instr)
 {
 	const char *prefix = check_prefix_override(instr);
 
-	if (prefix != NULL)
+	if (prefix != nullptr)
 		return prefix;
 
 	if (instr->flags & WIDTH_BYTE)

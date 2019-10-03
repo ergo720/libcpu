@@ -25,7 +25,7 @@
 //
 
 static char const * const m88k_insn_formats[] = {
-	NULL,              // M88K_FMT_NONE
+	nullptr,              // M88K_FMT_NONE
 	"$rd, $r1, $i",    // M88K_IFMT_REG
 	"$rd, $r1, $i",    // M88K_IFMT_MEM
 	"$xd, $r1, $i",    // M88K_IFMT_XMEM
@@ -53,17 +53,17 @@ static char const *m88k_insn_xrargs_format = "$xd, $r2";
 static char const *m88k_insn_jmp_format = "$r2";
 
 static char const * const m88k_bcmp_values[] = {
-	NULL, NULL, "eq", "ne", "gt", "le", "lt", "ge",
+	nullptr, nullptr, "eq", "ne", "gt", "le", "lt", "ge",
 	"hi", "ls", "lo", "hs", "be", "nb", "he", "nh",
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+	nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr
 };
 
 static char const * const m88k_bcnd_values[] = {
-	NULL, "gt0", "eq0", "ge0", NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, "lt0", "ne0", "le0", NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-	NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+	nullptr, "gt0", "eq0", "ge0", nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr, nullptr, "lt0", "ne0", "le0", nullptr,
+	nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+	nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr
 };
 
 static char const * const m88k_insn_mnemonics[] = {
@@ -190,7 +190,7 @@ static char const * const m88k_insn_mnemonics[] = {
 	"psub",
 
 	"punpk",
-	NULL
+	nullptr
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -294,7 +294,7 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 			break;
 	}
 
-	if (format == NULL)
+	if (format == nullptr)
 		return (0);
 
 	if (strbuf_append_char(strbuf, ' '))
@@ -366,7 +366,7 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 
 				case 'b':
 					tmp = m88k_bcmp_values[insn.mb()];
-					if (tmp == NULL) {
+					if (tmp == nullptr) {
 						if (strbuf_append_format(strbuf, "%#x", insn.mb()))
 							return (-1);
 					} else {
@@ -377,7 +377,7 @@ static int m88k_disassemble(strbuf_t *strbuf, m88k_address_t pc,
 
 				case 'C':
 					tmp = m88k_bcnd_values[insn.mb()];
-					if (tmp == NULL) {
+					if (tmp == nullptr) {
 						if (strbuf_append_format(strbuf, "%#x", insn.mb()))
 							return (-1);
 					} else {

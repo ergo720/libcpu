@@ -306,7 +306,7 @@ arch_mips_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		}
 	case 0x04: /* INCPU_BEQ */		
 		if (!RS && !RT) // special case: B
-			return NULL; /* should never be reached */
+			return nullptr; /* should never be reached */
 		else
 			return ICMP_EQ(R(RS), R(RT));
 	case 0x05: /* INCPU_BNE */		return ICMP_NE(R(RS), R(RT));
@@ -316,7 +316,7 @@ arch_mips_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	case 0x15: /* INCPU_BNEL */		return ICMP_NE(R(RS), R(RT));
 	case 0x16: /* INCPU_BLEZL */	return ICMP_SLE(R(RS), CONST(0));
 	case 0x17: /* INCPU_BGTZL */	return ICMP_SGT(R(RS), CONST(0));
-  default: assert(0 && "Not handled"); return NULL;
+  default: assert(0 && "Not handled"); return nullptr;
 	}
 }
 

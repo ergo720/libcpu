@@ -69,7 +69,7 @@ static cpu_flags_layout_t arch_x86_flags_layout[] = {
 	{ AF_SHIFT, 0, "AF" }, /* adjust flag */
 	{ PF_SHIFT, CPU_FLAGTYPE_PARITY, "PF" }, /* parity flag */
 	{ CF_SHIFT, CPU_FLAGTYPE_CARRY, "CF" }, /* carry flag */
-	{ -1, 0, NULL }
+	{ -1, 0, nullptr }
 };
 
 static void
@@ -99,8 +99,8 @@ arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	reg = (reg_x86_t *)calloc(1, sizeof(reg_x86_t));
 	fp_reg = (fpr_x86_t *)calloc(1, sizeof(fpr_x86_t));
-	assert(reg != NULL);
-	assert(fp_reg != NULL);
+	assert(reg != nullptr);
+	assert(fp_reg != nullptr);
 	reg->eflags = 0x2U;
 
 	rf->pc = &reg->eip;
@@ -161,5 +161,5 @@ arch_func_t arch_func_x86 = {
 	// idbg support
 	arch_x86_get_psr,
 	arch_x86_get_reg,
-	NULL
+	nullptr
 };

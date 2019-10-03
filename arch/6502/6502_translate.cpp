@@ -44,7 +44,7 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 			return GPR(A);
 		case ADDMODE_BRA:
 		case ADDMODE_IMPL:
-			return NULL;
+			return nullptr;
 		case ADDMODE_IMM:
 			{
 			Value *ptr_temp = new AllocaInst(getIntegerType(8), 0, "temp", bb);
@@ -55,12 +55,12 @@ arch_6502_get_operand_lvalue(cpu_t *cpu, addr_t pc, BasicBlock* bb) {
 
 	is_indirect = ((am == ADDMODE_IND) || (am == ADDMODE_INDX) || (am == ADDMODE_INDY));
 	is_8bit_base = !((am == ADDMODE_ABS) || (am == ADDMODE_ABSX) || (am == ADDMODE_ABSY));
-	index_register_before = NULL;
+	index_register_before = nullptr;
 	if ((am == ADDMODE_ABSX) || (am == ADDMODE_INDX) || (am == ADDMODE_ZPX))
 		index_register_before = GPR(X);
 	if ((am == ADDMODE_ABSY) || (am == ADDMODE_ZPY))
 		index_register_before = GPR(Y);
-	index_register_after = (am == ADDMODE_INDY)? GPR(Y) : NULL;
+	index_register_after = (am == ADDMODE_INDY)? GPR(Y) : nullptr;
 
 #if 0
 	LOG("pc = %x\n", pc);
@@ -114,7 +114,7 @@ LOG("%s:%d pc=%" PRIx64 " opcode=%x\n", __func__, __LINE__, pc, opcode);
 		case INSTR_BPL: /* !N */	return CC_PL;
 		case INSTR_BVS: /* V */		return CC_VS;
 		case INSTR_BVC: /* !V */	return CC_VC;
-		default:					return NULL; /* no condition; should not be reached */
+		default:					return nullptr; /* no condition; should not be reached */
 	}
 }
 
@@ -192,9 +192,9 @@ arch_6502_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		/* arithmetic */
 		case INSTR_ADC:	SET_NZ(ADC(GPR(A), GPR(A), OPERAND, true, false));		break;
 		case INSTR_SBC:	SET_NZ(ADC(GPR(A), GPR(A), COM(OPERAND), true, false));	break;
-		case INSTR_CMP:	SET_NZ(ADC(NULL, GPR(A), COM(OPERAND), false, true));		break;
-		case INSTR_CPX:	SET_NZ(ADC(NULL, GPR(X), COM(OPERAND), false, true));		break;
-		case INSTR_CPY:	SET_NZ(ADC(NULL, GPR(Y), COM(OPERAND), false, true));		break;
+		case INSTR_CMP:	SET_NZ(ADC(nullptr, GPR(A), COM(OPERAND), false, true));		break;
+		case INSTR_CPX:	SET_NZ(ADC(nullptr, GPR(X), COM(OPERAND), false, true));		break;
+		case INSTR_CPY:	SET_NZ(ADC(nullptr, GPR(Y), COM(OPERAND), false, true));		break;
 
 		/* increment/decrement */
 		case INSTR_INX:	SET_NZ(LET(X,INC(R(X))));			break;

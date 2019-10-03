@@ -67,7 +67,7 @@ arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	// allocate space for CC flags.
 	cpu->feptr = malloc(sizeof(ccarm_t));
-	assert(cpu->feptr != NULL);
+	assert(cpu->feptr != nullptr);
 }
 
 static void
@@ -112,5 +112,5 @@ arch_func_t arch_func_arm = {
 	// idbg support
 	arch_arm_get_psr,
 	arch_arm_get_reg,
-	NULL
+	nullptr
 };

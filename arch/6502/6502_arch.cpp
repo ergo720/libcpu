@@ -29,7 +29,7 @@ static cpu_flags_layout_t arch_6502_flags_layout[] = {
 	{ I_SHIFT, 0,   "I" },	/* interrupt disable */
 	{ Z_SHIFT, CPU_FLAGTYPE_ZERO, "Z" },	/* zero */
 	{ C_SHIFT, CPU_FLAGTYPE_CARRY, "C" },	/* carry */
-	{ -1, 0, NULL }
+	{ -1, 0, nullptr }
 };
 
 static void
@@ -106,8 +106,8 @@ arch_func_t arch_func_6502 = {
 	arch_6502_init,
 	arch_6502_done,
 	arch_6502_get_pc,
-	NULL, //emit_decode_reg
-	NULL, //spill_reg_state
+	nullptr, //emit_decode_reg
+	nullptr, //spill_reg_state
 	arch_6502_tag_instr,
 	arch_6502_disasm_instr,
 	arch_6502_translate_cond,
@@ -115,5 +115,5 @@ arch_func_t arch_func_6502 = {
 	// idbg support
 	arch_6502_get_psr,
 	arch_6502_get_reg,
-	NULL
+	nullptr
 };

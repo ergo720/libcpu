@@ -46,7 +46,7 @@ arch_get_reg(cpu_t *cpu, uint32_t index, uint32_t bits, BasicBlock *bb, uint32_t
 		count = cpu->info.regclass_count[CPU_REGCLASS_XR];
 		if (index >= count) {
 			assert(0 && "GPR/XR register index is out of range!");
-			return NULL;
+			return nullptr;
 		}
 	} else {
 		/* R0 is always 0 (on certain RISCs) */
@@ -96,7 +96,7 @@ arch_put_reg(cpu_t *cpu, uint32_t index, Value *v, uint32_t bits, bool sext,
 		count = cpu->info.regclass_count[CPU_REGCLASS_XR];
 		if (index >= count) {
 			assert(0 && "GPR/XR register index is out of range!");
-			return NULL;
+			return nullptr;
 		}
 	} 
 
@@ -358,11 +358,11 @@ arch_adc(cpu_t *cpu, Value *dst, Value *src, Value *v, bool plus_carry, bool plu
 void
 arch_branch(bool flag_state, BasicBlock *target1, BasicBlock *target2, Value *v, BasicBlock *bb) {
 	if (!target1) {
-		printf("target1 is NULL\n");
+		printf("target1 is nullptr\n");
 		exit(1);
 	}
 	if (!target2) {
-		printf("target2 is NULL\n");
+		printf("target2 is nullptr\n");
 		exit(1);
 	}
 	if (flag_state)
@@ -440,7 +440,7 @@ arch_sqrt(cpu_t *cpu, size_t width, Value *v, BasicBlock *bb) {
 void
 arch_debug_me(cpu_t *cpu, BasicBlock *bb)
 {
-	if (cpu->ptr_func_debug == NULL)
+	if (cpu->ptr_func_debug == nullptr)
 		return;
 
 	//IntegerType *intptr_type = cpu->jit->get_exec_engine()->getDataLayout().getIntPtrType(_CTX());

@@ -160,7 +160,7 @@ fp_cast(cpu_t *cpu, uint32_t bits, Value *v, BasicBlock *bb)
 		default: abort();
 	}
 	/* NOTREACHED */
-	return NULL;
+	return nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -193,7 +193,7 @@ Value *
 arch_load_fp_reg(cpu_t *cpu, uint32_t index, uint32_t bits,
 	BasicBlock *bb)
 {
-	Value *v = NULL;
+	Value *v = nullptr;
 	uint32_t size = cpu->info.float_size;
 
 	if (size == 80 && (cpu->flags & CPU_FLAG_FP80) == 0) {

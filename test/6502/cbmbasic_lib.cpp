@@ -147,7 +147,7 @@ init_os(int argc, char **argv) {
 		}
 	} else {
 		interactive = 1;
-		f = NULL;
+		f = nullptr;
 	}
 }
 #endif

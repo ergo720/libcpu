@@ -96,7 +96,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu_t *cpu;
 
 	cpu = new cpu_t();
-	assert(cpu != NULL);
+	assert(cpu != nullptr);
 
 	cpu->info.type = arch;
 	cpu->info.name = "noname";
@@ -133,13 +133,13 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu->code_start = 0;
 	cpu->code_end = 0;
 	cpu->code_entry = 0;
-	cpu->tag = NULL;
+	cpu->tag = nullptr;
 
 	uint32_t i;
 	for (i = 0; i < sizeof(cpu->func)/sizeof(*cpu->func); i++)
-		cpu->func[i] = NULL;
+		cpu->func[i] = nullptr;
 	for (i = 0; i < sizeof(cpu->fp)/sizeof(*cpu->fp); i++)
-		cpu->fp[i] = NULL;
+		cpu->fp[i] = nullptr;
 	cpu->functions = 0;
 
 	cpu->flags_codegen = CPU_CODEGEN_OPTIMIZE;
@@ -171,8 +171,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->ptr_gpr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_gpr = (Value **)calloc(count, sizeof(Value *));
 	} else {
-		cpu->ptr_gpr = NULL;
-		cpu->in_ptr_gpr = NULL;
+		cpu->ptr_gpr = nullptr;
+		cpu->in_ptr_gpr = nullptr;
 	}
 
 	count = cpu->info.regclass_count[CPU_REGCLASS_XR];
@@ -180,8 +180,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->ptr_xr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_xr = (Value **)calloc(count, sizeof(Value *));
 	} else {
-		cpu->ptr_xr = NULL;
-		cpu->in_ptr_xr = NULL;
+		cpu->ptr_xr = nullptr;
+		cpu->in_ptr_xr = nullptr;
 	}
 
 	count = cpu->info.regclass_count[CPU_REGCLASS_FPR];
@@ -189,14 +189,14 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		cpu->ptr_fpr = (Value **)calloc(count, sizeof(Value *));
 		cpu->in_ptr_fpr = (Value **)calloc(count, sizeof(Value *));
 	} else {
-		cpu->ptr_fpr = NULL;
-		cpu->in_ptr_fpr = NULL;
+		cpu->ptr_fpr = nullptr;
+		cpu->in_ptr_fpr = nullptr;
 	}
 
 	if (cpu->info.psr_size != 0) {
 		cpu->ptr_FLAG = (Value **)calloc(cpu->info.psr_size,
 				sizeof(Value*));
-		assert(cpu->ptr_FLAG != NULL);
+		assert(cpu->ptr_FLAG != nullptr);
 	}
 
 	// init LLVM
@@ -204,9 +204,9 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	InitializeNativeTargetAsmParser();
 	InitializeNativeTargetAsmPrinter();
 	cpu->ctx[cpu->functions] = new LLVMContext();
-	assert(cpu->ctx[cpu->functions] != NULL);
+	assert(cpu->ctx[cpu->functions] != nullptr);
 	cpu->mod[cpu->functions] = new Module(cpu->info.name, _CTX());
-	assert(cpu->mod[cpu->functions] != NULL);
+	assert(cpu->mod[cpu->functions] != nullptr);
 	const auto& tt = cpu->mod[cpu->functions]->getTargetTriple();
 	orc::JITTargetMachineBuilder jtmb =
 		tt.empty() ? *orc::JITTargetMachineBuilder::detectHost()
@@ -260,30 +260,30 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 void
 cpu_free(cpu_t *cpu)
 {
-	if (cpu->f.done != NULL)
+	if (cpu->f.done != nullptr)
 		cpu->f.done(cpu);
-	if (cpu->jit != NULL) {
-		//if (cpu->cur_func != NULL) {
+	if (cpu->jit != nullptr) {
+		//if (cpu->cur_func != nullptr) {
 		//	cpu->cur_func->eraseFromParent();
 		//}
 		llvm_shutdown();
-		cpu->jit.reset(NULL);
+		cpu->jit.reset(nullptr);
 	}
-	if (cpu->dl != NULL)
+	if (cpu->dl != nullptr)
 		delete cpu->dl;
-	if (cpu->ptr_FLAG != NULL)
+	if (cpu->ptr_FLAG != nullptr)
 		free(cpu->ptr_FLAG);
-	if (cpu->in_ptr_fpr != NULL)
+	if (cpu->in_ptr_fpr != nullptr)
 		free(cpu->in_ptr_fpr);
-	if (cpu->ptr_fpr != NULL)
+	if (cpu->ptr_fpr != nullptr)
 		free(cpu->ptr_fpr);
-	if (cpu->in_ptr_xr != NULL)
+	if (cpu->in_ptr_xr != nullptr)
 		free(cpu->in_ptr_xr);
-	if (cpu->ptr_xr != NULL)
+	if (cpu->ptr_xr != nullptr)
 		free(cpu->ptr_xr);
-	if (cpu->in_ptr_gpr != NULL)
+	if (cpu->in_ptr_gpr != nullptr)
 		free(cpu->in_ptr_gpr);
-	if (cpu->ptr_gpr != NULL)
+	if (cpu->ptr_gpr != nullptr)
 		free(cpu->ptr_gpr);
 
 	delete cpu;
@@ -326,13 +326,13 @@ cpu_translate_function(cpu_t *cpu)
 {
 	BasicBlock *bb_ret, *bb_trap, *label_entry, *bb_start;
 
-	if (cpu->ctx[cpu->functions] == NULL) {
+	if (cpu->ctx[cpu->functions] == nullptr) {
 		cpu->ctx[cpu->functions] = new LLVMContext();
-		assert(cpu->ctx[cpu->functions] != NULL);
+		assert(cpu->ctx[cpu->functions] != nullptr);
 	}
-	if (cpu->mod[cpu->functions] == NULL) {
+	if (cpu->mod[cpu->functions] == nullptr) {
 		cpu->mod[cpu->functions] = new Module(cpu->info.name, _CTX());
-		assert(cpu->mod[cpu->functions] != NULL);
+		assert(cpu->mod[cpu->functions] != nullptr);
 	}
 
 	/* create function and fill it with std basic blocks */
@@ -357,14 +357,14 @@ cpu_translate_function(cpu_t *cpu)
 	verifyFunction(*cpu->cur_func, &llvm::errs());
 
 	if (cpu->flags_debug & CPU_DEBUG_PRINT_IR)
-		cpu->mod[cpu->functions]->print(llvm::errs(), NULL);
+		cpu->mod[cpu->functions]->print(llvm::errs(), nullptr);
 
 	if (cpu->flags_codegen & CPU_CODEGEN_OPTIMIZE) {
 		LOG("*** Optimizing...");
 		optimize(cpu);
 		LOG("done.\n");
 		if (cpu->flags_debug & CPU_DEBUG_PRINT_IR_OPTIMIZED)
-			cpu->mod[cpu->functions]->print(llvm::errs(), NULL);
+			cpu->mod[cpu->functions]->print(llvm::errs(), nullptr);
 	}
 
 	LOG("*** Translating...");
@@ -375,7 +375,7 @@ cpu_translate_function(cpu_t *cpu)
 	assert(!err);
 	auto fp = (void*)(cpu->jit->lookup(cpu->cur_func->getName())->getAddress());
 	cpu->fp[cpu->functions] = fp;
-	assert(fp != NULL);
+	assert(fp != nullptr);
 	update_timing(cpu, TIMER_BE, false);
 	LOG("done.\n");
 
@@ -427,8 +427,8 @@ cpu_run(cpu_t *cpu, debug_function_t debug_function)
 			update_timing(cpu, TIMER_RUN, true);
 			breakpoint();
 			ret = FP(cpu->RAM, cpu->rf.grf, cpu->rf.frf, debug_function);
-			cpu->ctx[i] = NULL;
-			cpu->mod[i] = NULL;
+			cpu->ctx[i] = nullptr;
+			cpu->mod[i] = nullptr;
 			update_timing(cpu, TIMER_RUN, false);
 			pc = cpu->f.get_pc(cpu, cpu->rf.grf);
 			if (ret != JIT_RETURN_FUNCNOTFOUND)

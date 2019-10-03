@@ -126,7 +126,7 @@ arch_arm_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb) {
 		case 0xD: /* LE */
 			return NOT(AND(NOT(LOAD(ptr_Z)),ICMP_EQ(LOAD(ptr_N),LOAD(ptr_V))));
 		case 0xE: /* AL */
-			return NULL; /* no condition; this should never happen */
+			return nullptr; /* no condition; this should never happen */
 		case 0xF: /* NV */
 			return FALSE;
 		default:

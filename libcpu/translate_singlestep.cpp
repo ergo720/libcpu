@@ -32,7 +32,7 @@ cpu_translate_singlestep(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 {
 	addr_t new_pc;
 	tag_t tag;
-	BasicBlock *cur_bb = NULL, *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
+	BasicBlock *cur_bb = nullptr, *bb_target = nullptr, *bb_next = nullptr, *bb_cont = nullptr;
 	addr_t next_pc, pc = cpu->f.get_pc(cpu, cpu->rf.grf);
 
 	cur_bb = BasicBlock::Create(_CTX(), "instruction", cpu->cur_func, 0);

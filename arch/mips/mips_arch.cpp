@@ -178,8 +178,8 @@ arch_func_t arch_func_mips = {
 	arch_mips_init,
 	arch_mips_done,
 	arch_mips_get_pc,
-	NULL, /* emit_decode_reg */
-	NULL, /* spill_reg_state */
+	nullptr, /* emit_decode_reg */
+	nullptr, /* spill_reg_state */
 	arch_mips_tag_instr,
 	arch_mips_disasm_instr,
 	arch_mips_translate_cond,
@@ -187,5 +187,5 @@ arch_func_t arch_func_mips = {
 	// idbg support
 	arch_mips_get_psr,
 	arch_mips_get_reg,
-	NULL
+	nullptr
 };

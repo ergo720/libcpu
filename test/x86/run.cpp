@@ -79,7 +79,7 @@ main(int argc, char **argv)
 						printf("Missing argument for option \"c\"\n");
 						return 0;
 					}
-					code_start = std::stoull(std::string(argv[idx]), NULL, 0);
+					code_start = std::stoull(std::string(argv[idx]), nullptr, 0);
 					break;
 
 				case 'e':
@@ -87,7 +87,7 @@ main(int argc, char **argv)
 						printf("Missing argument for option \"e\"\n");
 						return 0;
 					}
-					code_entry = std::stoull(std::string(argv[idx]), NULL, 0);
+					code_entry = std::stoull(std::string(argv[idx]), nullptr, 0);
 					break;
 
 				case 's':
@@ -95,7 +95,7 @@ main(int argc, char **argv)
 						printf("Missing argument for option \"s\"\n");
 						return 0;
 					}
-					ramsize = std::stoull(std::string(argv[idx]), NULL, 0);
+					ramsize = std::stoull(std::string(argv[idx]), nullptr, 0);
 					break;
 
 				case 'h':
@@ -146,7 +146,7 @@ main(int argc, char **argv)
 	}
 
 	RAM = (uint8_t*)malloc(ramsize);
-	if (RAM == NULL) {
+	if (RAM == nullptr) {
 		printf("Failed to allocate RAM buffer!\n");
 		return 3;
 	}

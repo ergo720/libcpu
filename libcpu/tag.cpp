@@ -64,7 +64,7 @@ init_tagging(cpu_t *cpu)
 			<< std::hex << cpu->code_entry;
 		sprintf(cache_fn, "%slibcpu-%s-%s.entries", get_temp_dir(), ascii_digest, stream.str().c_str());
 		
-		cpu->file_entries = NULL;
+		cpu->file_entries = nullptr;
 		
 		FILE *f;
 		if ((f = fopen(cache_fn, "r"))) {

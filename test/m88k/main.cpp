@@ -134,7 +134,7 @@ dump_state(uint8_t *RAM, m88k_grf_t *reg, m88k_xrf_t *xrf)
 			printf("\n");
 		printf("R%02d=%08x ", i, (unsigned int)reg->r[i]);
 	}
-	for (int i=0; xrf != NULL && i<32; i++) {
+	for (int i=0; xrf != nullptr && i<32; i++) {
 		if (!(i%2))
 			printf("\n");
 		printf("X%02d=%04x%016" PRIx64 " (%.8f) ", i,
@@ -293,7 +293,7 @@ main(int argc, char **argv)
 	R[2] = 0x3f800000; // 1.0
 	ieee754_fp80_set_d(&X[2], 1.0);
 #endif
-	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, NULL);
+	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, nullptr);
 
 #ifdef SINGLESTEP
 	for(step = 0;;) {
@@ -361,7 +361,7 @@ double_break:
 
 	printf("done!\n");
 	
-	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, NULL);
+	dump_state(RAM, (m88k_grf_t*)cpu->rf.grf, nullptr);
 
 	printf("RUN2..."); fflush(stdout);
 	t3 = abs_time();

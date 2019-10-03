@@ -106,8 +106,8 @@ arch_func_t arch_func_fapra = {
 	arch_fapra_init,
 	arch_fapra_done,
 	arch_fapra_get_pc,
-	NULL, /* emit_decode_reg */
-	NULL, /* spill_reg_state */
+	nullptr, /* emit_decode_reg */
+	nullptr, /* spill_reg_state */
 	arch_fapra_tag_instr,
 	arch_fapra_disasm_instr,
 	arch_fapra_translate_cond,
@@ -115,5 +115,5 @@ arch_func_t arch_func_fapra = {
 	// idbg support
 	arch_fapra_get_psr,
 	arch_fapra_get_reg,
-	NULL
+	nullptr
 };

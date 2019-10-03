@@ -46,7 +46,7 @@ cpu_translate_all(cpu_t *cpu, BasicBlock *bb_ret, BasicBlock *bb_trap)
 		BasicBlock *cur_bb = it->second;
 
 		tag_t tag;
-		BasicBlock *bb_target = NULL, *bb_next = NULL, *bb_cont = NULL;
+		BasicBlock *bb_target = nullptr, *bb_next = nullptr, *bb_cont = nullptr;
 
 		// Tag the function as translated.
 		or_tag(cpu, pc, TAG_TRANSLATED);

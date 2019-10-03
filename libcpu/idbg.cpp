@@ -641,11 +641,11 @@ idbg_init(cpu_t *cpu, debug_function_t debug_func, idbg_t *ctx)
 
 	if (ctx->gpr_count != 0) {
 		ctx->saved_regs = (uint64_t *)malloc(sizeof(uint64_t) * ctx->gpr_count);
-		assert(ctx->saved_regs != NULL);
+		assert(ctx->saved_regs != nullptr);
 	}
 	if (ctx->fpr_count != 0) {
 		ctx->saved_fp_regs = (fp128_reg_t *)malloc(sizeof(fp128_reg_t) * ctx->fpr_count);
-		assert(ctx->saved_fp_regs != NULL);
+		assert(ctx->saved_fp_regs != nullptr);
 	}
 
 	// Turn on single step
@@ -664,9 +664,9 @@ idbg_done(idbg_t *ctx)
 	cpu_set_flags_debug(ctx->cpu, ctx->old_debug_flags);
 	cpu_set_flags_codegen(ctx->cpu, ctx->old_codegen_flags);
 	ctx->cpu->flags = ctx->old_flags;
-	if (ctx->saved_fp_regs != NULL)
+	if (ctx->saved_fp_regs != nullptr)
 		free(ctx->saved_fp_regs);
-	if (ctx->saved_regs != NULL)
+	if (ctx->saved_regs != nullptr)
 		free(ctx->saved_regs);
 }
 
@@ -865,7 +865,7 @@ idbg_input_read(char const *prompt)
 {
 #ifdef USE_READLINE
 	char *p = readline(prompt);
-	if (p != NULL) {
+	if (p != nullptr) {
 		while (isspace (*p))
 			p++;
 		if (*p != '\0')
@@ -875,8 +875,8 @@ idbg_input_read(char const *prompt)
 #else
 	static char buf[256];
 	fprintf(stdout, "%s", prompt); fflush(stdout);
-	if (fgets(buf, sizeof(buf), stdin) == NULL)
-		return (NULL);
+	if (fgets(buf, sizeof(buf), stdin) == nullptr)
+		return (nullptr);
 	return (buf);
 #endif
 }
@@ -886,7 +886,7 @@ idbg_address_operand(idbg_t *ctx, char const *token, addr_t *address)
 {
 	cpu_t *cpu = ctx->cpu;
 
-	if (token == NULL || *token == '\0')
+	if (token == nullptr || *token == '\0')
 		return (-1);
 
 	if (*token == '$') {
@@ -909,9 +909,9 @@ idbg_address_operand(idbg_t *ctx, char const *token, addr_t *address)
 
 		*address = value;
 	} else if (*token == '0' && (*(token + 1) == 'x' || *(token + 1) == 'X')) {
-		*address = strtoull(token + 2, NULL, 16);
+		*address = strtoull(token + 2, nullptr, 16);
 	} else {
-		*address = strtoull(token, NULL, 10);
+		*address = strtoull(token, nullptr, 10);
 	}
 
 	return (0);
@@ -922,7 +922,7 @@ idbg_register_operand(idbg_t *ctx, char const *token, unsigned *type, int *index
 {
 	cpu_t *cpu = ctx->cpu;
 
-	if (token == NULL || *token == '\0')
+	if (token == nullptr || *token == '\0')
 		return (-1);
 
 	if (*token == '$') {
@@ -1061,14 +1061,14 @@ cpu_debugger(cpu_t *cpu, debug_function_t debug_function)
 	format = ctx.gpr_format;
 	mode = M_HEX;
 	for (;;) {
-		char const *p = NULL;
+		char const *p = nullptr;
 		
 		if (interactive)
 			p = idbg_input_read("idbg% ");
 		else
 			last_count = 2;
 
-		if (p == NULL || ((*p == 'c' || *p == 'q') && *(p + 1) == 0)) {
+		if (p == nullptr || ((*p == 'c' || *p == 'q') && *(p + 1) == 0)) {
 			rc = -1;
 			break;
 		}

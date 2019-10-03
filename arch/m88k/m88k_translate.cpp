@@ -217,7 +217,7 @@ arch_m88k_get_fpr(cpu_t *cpu, bool xfr, m88k_reg_t r, uint32_t t,
 		}
 	}
 	abort(); // can't happen
-	return NULL;
+	return nullptr;
 }
 
 static void
@@ -351,7 +351,7 @@ arch_m88k_fp_op(cpu_t *cpu, unsigned op, Value *a, Value *b,
 		case FP_OP_CMP_UGE:	return FPCMP_UGE(a, b);
 		case FP_OP_CMP_UGT:	return FPCMP_UGT(a, b);
 		default:			assert(0 && "Invalid FP operation");
-							return NULL;
+							return nullptr;
 	}
 }
 
@@ -428,11 +428,11 @@ arch_m88k_bcnd_cond(cpu_t *cpu, Value *src1, m88k_bcnd_t cond, BasicBlock *bb)
 
 		case M88K_BCND_NEVER:
 		case M88K_BCND_ALWAYS:
-			return NULL;
+			return nullptr;
 
 		default:
 			assert(0 && "Cannot happen");
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -452,7 +452,7 @@ arch_m88k_translate_cond(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		case M88K_OPC_BB1_N:
 			return ICMP_NE(AND(R32(insn.rs1()), CONST32(1 << bit)), CONST(0));
 		default:
-			return NULL;
+			return nullptr;
 	}
 }
 
@@ -866,7 +866,7 @@ arch_m88k_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		case M88K_OPC_EXT:
 		case M88K_OPC_EXTU:
 			arch_m88k_shift(cpu, opc, instr.rd(), R32(instr.rs1()),
-				(fmt == M88K_BFMT_REG) ? NULL : R32(instr.rs2()),
+				(fmt == M88K_BFMT_REG) ? nullptr : R32(instr.rs2()),
 				instr.bit_width(), instr.bit_offset(),
 				(fmt == M88K_BFMT_REG), bb);
 			break;

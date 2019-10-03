@@ -136,7 +136,7 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	rf->pc = &reg->sxip;
 	rf->grf = reg;
 	rf->frf = fp_reg;
-	rf->vrf = NULL;
+	rf->vrf = nullptr;
 
 	LOG("Motorola 88110 initialized.\n");
 }

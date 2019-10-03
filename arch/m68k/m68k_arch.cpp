@@ -83,10 +83,10 @@ arch_m68k_get_reg(cpu_t *cpu, void *reg, unsigned reg_no, uint64_t *value)
 
 arch_func_t arch_func_m68k = {
 	arch_m68k_init,
-	NULL,
+	nullptr,
 	arch_m68k_get_pc,
-	NULL, /* emit_decode_reg */
-	NULL, /* spill_reg_state */
+	nullptr, /* emit_decode_reg */
+	nullptr, /* spill_reg_state */
 	arch_m68k_tag_instr,
 	arch_m68k_disasm_instr,
 	arch_m68k_translate_cond,
@@ -94,5 +94,5 @@ arch_func_t arch_func_m68k = {
 	// idbg support
 	arch_m68k_get_psr,
 	arch_m68k_get_reg,
-	NULL
+	nullptr
 };
