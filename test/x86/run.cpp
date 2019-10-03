@@ -140,8 +140,8 @@ main(int argc, char **argv)
 		printf("Size of binary file \"%s\" detected as zero!\n", executable.c_str());
 		return 2;
 	}
-	else if (length > ramsize) {
-		printf("Size of binary file \"%s\" exceeds size of allocated RAM!\n", executable.c_str());
+	else if (code_start + length > ramsize) {
+		printf("Binary file \"%s\" doesn't fit inside RAM!\n", executable.c_str());
 		return 2;
 	}
 
