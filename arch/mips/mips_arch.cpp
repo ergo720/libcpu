@@ -79,7 +79,7 @@ static cpu_register_layout_t arch_mips_register_layout[] = {
 };
 #endif
 
-static void
+static libcpu_status
 arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	// Basic Information
@@ -120,6 +120,9 @@ arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	if (info->arch_flags & CPU_MIPS_IS_64BIT) {
 		reg_mips64_t *reg;
 		reg = (reg_mips64_t*)malloc(sizeof(reg_mips64_t));
+		if (reg == nullptr) {
+			return LIBCPU_NO_MEMORY;
+		}
 		for (int i=0; i<32; i++) 
 			reg->r[i] = 0;
 		reg->pc = 0;
@@ -129,6 +132,9 @@ arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	} else {
 		reg_mips32_t *reg;
 		reg = (reg_mips32_t*)malloc(sizeof(reg_mips32_t));
+		if (reg == nullptr) {
+			return LIBCPU_NO_MEMORY;
+		}
 		for (int i=0; i<32; i++) 
 			reg->r[i] = 0;
 		reg->pc = 0;
@@ -138,6 +144,8 @@ arch_mips_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	}
 
 	LOG("%d bit MIPS initialized.\n", info->word_size);
+
+	return LIBCPU_SUCCESS;
 }
 
 static void

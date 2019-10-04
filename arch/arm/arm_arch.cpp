@@ -31,7 +31,7 @@ static cpu_register_layout_t arch_arm_register_layout[] = {
 	{ 0, 32, 0, 0, 0, "CPSR" },
 };
 
-static void
+static libcpu_status
 arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	// Basic Information
@@ -59,6 +59,9 @@ arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	reg_arm_t *reg;
 	reg = (reg_arm_t*)malloc(sizeof(reg_arm_t));
+	if (reg == nullptr) {
+		return LIBCPU_NO_MEMORY;
+	}
 	for (int i=0; i<17; i++) /* this includes pc */
 		reg->r[i] = 0;
 
@@ -68,6 +71,8 @@ arch_arm_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	// allocate space for CC flags.
 	cpu->feptr = malloc(sizeof(ccarm_t));
 	assert(cpu->feptr != nullptr);
+
+	return LIBCPU_SUCCESS;
 }
 
 static void

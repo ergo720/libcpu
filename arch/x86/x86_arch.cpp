@@ -72,7 +72,7 @@ static cpu_flags_layout_t arch_x86_flags_layout[] = {
 	{ -1, 0, nullptr }
 };
 
-static void
+static libcpu_status
 arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	reg_x86_t *reg;
@@ -98,14 +98,21 @@ arch_x86_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	info->flags_layout = arch_x86_flags_layout;
 
 	reg = (reg_x86_t *)calloc(1, sizeof(reg_x86_t));
+	if (reg == nullptr) {
+		return LIBCPU_NO_MEMORY;
+	}
 	fp_reg = (fpr_x86_t *)calloc(1, sizeof(fpr_x86_t));
-	assert(reg != nullptr);
-	assert(fp_reg != nullptr);
+	if (fp_reg == nullptr) {
+		free(reg);
+		return LIBCPU_NO_MEMORY;
+	}
 	reg->eflags = 0x2U;
 
 	rf->pc = &reg->eip;
 	rf->grf = reg;
 	rf->frf = fp_reg;
+
+	return LIBCPU_SUCCESS;
 }
 
 static void

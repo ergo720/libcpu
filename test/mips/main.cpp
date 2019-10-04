@@ -146,10 +146,10 @@ main(int argc, char **argv)
 	ramsize = 5*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_MIPS, CPU_FLAG_ENDIAN_BIG,
-			CPU_MIPS_IS_32BIT
-			//CPU_MIPS_IS_64BIT
-			);
+	if (!LIBCPU_CHECK_SUCCESS(cpu_new(CPU_ARCH_MIPS, CPU_FLAG_ENDIAN_BIG, CPU_MIPS_IS_32BIT, /*CPU_MIPS_IS_64BIT*/ cpu))) {
+		printf("Failed to initialize libcpu!\n");
+		return 1;
+	}
 
 #ifdef SINGLESTEP
 	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE);

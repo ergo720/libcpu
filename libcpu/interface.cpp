@@ -90,13 +90,15 @@ is_valid_vr_size(cpu_t *cpu, uint32_t offset, uint32_t count)
 // cpu_t
 //////////////////////////////////////////////////////////////////////
 
-cpu_t *
-cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
+libcpu_status
+cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags, cpu_t *&out)
 {
 	cpu_t *cpu;
 
 	cpu = new cpu_t();
-	assert(cpu != nullptr);
+	if (cpu == nullptr) {
+		return LIBCPU_NO_MEMORY;
+	}
 
 	cpu->info.type = arch;
 	cpu->info.name = "noname";
@@ -126,8 +128,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 			cpu->f = arch_func_fapra;
 			break;
 		default:
-			printf("illegal arch: %d\n", arch);
-			exit(1);
+			cpu_free(cpu);
+			return LIBCPU_INVALID_PARAMETER;
 	}
 
 	cpu->code_start = 0;
@@ -148,7 +150,11 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu->flags = 0;
 
 	// init the frontend
-	cpu->f.init(cpu, &cpu->info, &cpu->rf);
+	libcpu_status status = cpu->f.init(cpu, &cpu->info, &cpu->rf);
+	if (!LIBCPU_CHECK_SUCCESS(status)) {
+		cpu_free(cpu);
+		return status;
+	}
 
 	size_t offset = 0;
 	for (unsigned rc = 0; rc < CPU_REGCLASS_COUNT; rc++) {
@@ -204,9 +210,15 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	InitializeNativeTargetAsmParser();
 	InitializeNativeTargetAsmPrinter();
 	cpu->ctx[cpu->functions] = new LLVMContext();
-	assert(cpu->ctx[cpu->functions] != nullptr);
+	if (cpu->ctx[cpu->functions] == nullptr) {
+		cpu_free(cpu);
+		return LIBCPU_NO_MEMORY;
+	}
 	cpu->mod[cpu->functions] = new Module(cpu->info.name, _CTX());
-	assert(cpu->mod[cpu->functions] != nullptr);
+	if(cpu->mod[cpu->functions] == nullptr) {
+		cpu_free(cpu);
+		return LIBCPU_NO_MEMORY;
+	}
 	const auto& tt = cpu->mod[cpu->functions]->getTargetTriple();
 	orc::JITTargetMachineBuilder jtmb =
 		tt.empty() ? *orc::JITTargetMachineBuilder::detectHost()
@@ -222,11 +234,21 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 		.setRelocationModel(None)
 		.setCodeModel(None);
 	auto dl = jtmb.getDefaultDataLayoutForTarget();
-	assert(dl);
+	if (!dl) {
+		cpu_free(cpu);
+		return LIBCPU_LLVM_INTERNAL_ERROR;
+	}
 	cpu->dl = new DataLayout(*dl);
+	if (cpu->dl == nullptr) {
+		cpu_free(cpu);
+		return LIBCPU_NO_MEMORY;
+	}
 	// XXX use sys::getHostNumPhysicalCores from LLVM to exclude logical cores?
 	auto lazyjit = orc::LLLazyJIT::Create(std::move(jtmb), *dl, NULL, std::thread::hardware_concurrency());
-	assert(lazyjit);
+	if (!lazyjit) {
+		cpu_free(cpu);
+		return LIBCPU_LLVM_INTERNAL_ERROR;
+	}
 	cpu->jit = std::move(*lazyjit);
 	cpu->jit->setPartitionFunction(orc::CompileOnDemandLayer::compileRequested);
 	cpu->jit->getMainJITDylib().setGenerator(
@@ -254,7 +276,8 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags)
 	cpu->timer_total[TIMER_BE] = 0;
 	cpu->timer_total[TIMER_RUN] = 0;
 
-	return cpu;
+	out = cpu;
+	return LIBCPU_SUCCESS;
 }
 
 void
@@ -268,6 +291,14 @@ cpu_free(cpu_t *cpu)
 		//}
 		llvm_shutdown();
 		cpu->jit.reset(nullptr);
+	}
+	for (int i = 0; i < 1024; i++) {
+		if (cpu->ctx[i])
+			delete cpu->ctx[i];
+	}
+	for (int i = 0; i < 1024; i++) {
+		if (cpu->mod[i])
+			delete cpu->mod[i];
 	}
 	if (cpu->dl != nullptr)
 		delete cpu->dl;
@@ -289,28 +320,53 @@ cpu_free(cpu_t *cpu)
 	delete cpu;
 }
 
-void
+libcpu_status
 cpu_set_ram(cpu_t*cpu, uint8_t *r)
 {
+	if (r == nullptr) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
 	cpu->RAM = r;
+	return LIBCPU_SUCCESS;
 }
 
-void
+libcpu_status
 cpu_set_flags_codegen(cpu_t *cpu, uint32_t f)
 {
+	if (f & ~(CPU_CODEGEN_OPTIMIZE | CPU_CODEGEN_TAG_LIMIT)) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
 	cpu->flags_codegen = f;
+	return LIBCPU_SUCCESS;
 }
 
-void
+libcpu_status
 cpu_set_flags_debug(cpu_t *cpu, uint32_t f)
 {
+	if (f & ~(CPU_DEBUG_SINGLESTEP | CPU_DEBUG_SINGLESTEP_BB | CPU_DEBUG_PRINT_IR | CPU_DEBUG_PRINT_IR_OPTIMIZED
+		| CPU_DEBUG_LOG | CPU_DEBUG_PROFILE | CPU_DEBUG_INTEL_SYNTAX)) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
+	if ((f & CPU_DEBUG_INTEL_SYNTAX) && (cpu->info.type != CPU_ARCH_X86)) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
 	cpu->flags_debug = f;
+	return LIBCPU_SUCCESS;
 }
 
-void
+libcpu_status
 cpu_set_flags_hint(cpu_t *cpu, uint32_t f)
 {
+	if (f & ~(CPU_HINT_TRAP_RETURNS | CPU_HINT_TRAP_RETURNS_TWICE)) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
 	cpu->flags_hint = f;
+	return LIBCPU_SUCCESS;
 }
 
 void

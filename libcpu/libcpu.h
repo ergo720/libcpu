@@ -25,6 +25,18 @@ namespace orc {
 }
 }
 
+//////////////////////////////////////////////////////////////////////
+// error flags
+//////////////////////////////////////////////////////////////////////
+enum libcpu_status {
+	LIBCPU_NO_MEMORY = -3,
+	LIBCPU_INVALID_PARAMETER,
+	LIBCPU_LLVM_INTERNAL_ERROR,
+	LIBCPU_SUCCESS,
+};
+
+#define LIBCPU_CHECK_SUCCESS(status) (((libcpu_status)(status)) == 0)
+
 #include "types.h"
 #include "fp_types.h"
 
@@ -32,23 +44,23 @@ using namespace llvm;
 
 struct cpu;
 
-typedef void        (*fp_init)(struct cpu *cpu, struct cpu_archinfo *info, struct cpu_archrf *rf);
-typedef void        (*fp_done)(struct cpu *cpu);
+typedef libcpu_status	(*fp_init)(struct cpu *cpu, struct cpu_archinfo *info, struct cpu_archrf *rf);
+typedef void			(*fp_done)(struct cpu *cpu);
 // @@@BEGIN_DEPRECATION
-typedef StructType *(*fp_get_struct_reg)(struct cpu *cpu);
-typedef addr_t      (*fp_get_pc)(struct cpu *cpu, void *regs);
+typedef StructType *	(*fp_get_struct_reg)(struct cpu *cpu);
+typedef addr_t			(*fp_get_pc)(struct cpu *cpu, void *regs);
 // @@@END_DEPRECATION
-typedef void        (*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
-typedef void        (*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
-typedef int         (*fp_tag_instr)(struct cpu *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc);
-typedef int         (*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
-typedef Value      *(*fp_translate_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
-typedef int         (*fp_translate_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
+typedef void			(*fp_emit_decode_reg)(struct cpu *cpu, BasicBlock *bb);
+typedef void			(*fp_spill_reg_state)(struct cpu *cpu, BasicBlock *bb);
+typedef int				(*fp_tag_instr)(struct cpu *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *next_pc);
+typedef int				(*fp_disasm_instr)(struct cpu *cpu, addr_t pc, char *line, unsigned int max_line);
+typedef Value *			(*fp_translate_cond)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
+typedef int				(*fp_translate_instr)(struct cpu *cpu, addr_t pc, BasicBlock *bb);
 // @@@BEGIN_DEPRECATION
 // idbg support
-typedef uint64_t    (*fp_get_psr)(struct cpu *cpu, void *regs);
-typedef int         (*fp_get_reg)(struct cpu *cpu, void *regs, unsigned reg_no, uint64_t *value);
-typedef int         (*fp_get_fp_reg)(struct cpu *cpu, void *regs, unsigned reg_no, void *value);
+typedef uint64_t		(*fp_get_psr)(struct cpu *cpu, void *regs);
+typedef int				(*fp_get_reg)(struct cpu *cpu, void *regs, unsigned reg_no, uint64_t *value);
+typedef int				(*fp_get_fp_reg)(struct cpu *cpu, void *regs, unsigned reg_no, void *value);
 // @@@END_DEPRECATION
 
 typedef struct {
@@ -336,15 +348,15 @@ typedef void (*debug_function_t)(cpu_t*);
 
 //////////////////////////////////////////////////////////////////////
 
-API_FUNC cpu_t *cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags);
+API_FUNC libcpu_status cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags, cpu_t *&out);
 API_FUNC void cpu_free(cpu_t *cpu);
-API_FUNC void cpu_set_flags_codegen(cpu_t *cpu, uint32_t f);
-API_FUNC void cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
-API_FUNC void cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
+API_FUNC libcpu_status cpu_set_flags_codegen(cpu_t *cpu, uint32_t f);
+API_FUNC libcpu_status cpu_set_flags_hint(cpu_t *cpu, uint32_t f);
+API_FUNC libcpu_status cpu_set_flags_debug(cpu_t *cpu, uint32_t f);
 API_FUNC void cpu_tag(cpu_t *cpu, addr_t pc);
 API_FUNC int cpu_run(cpu_t *cpu, debug_function_t debug_function);
 API_FUNC void cpu_translate(cpu_t *cpu);
-API_FUNC void cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
+API_FUNC libcpu_status cpu_set_ram(cpu_t *cpu, uint8_t *RAM);
 API_FUNC void cpu_flush(cpu_t *cpu);
 API_FUNC void cpu_print_statistics(cpu_t *cpu);
 

@@ -79,7 +79,7 @@ static cpu_register_layout_t arch_m88k_register_layout[] = {
 	{ 0, 80, 0, 0, 0, "X31" },
 };
 
-static void
+static libcpu_status
 arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	m88k_grf_t *reg;
@@ -121,7 +121,14 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	// Setup the register files
 	reg = (m88k_grf_t *)malloc(sizeof(m88k_grf_t));
+	if (reg == nullptr) {
+		return LIBCPU_NO_MEMORY;
+	}
 	fp_reg = (m88k_xrf_t *)malloc(sizeof(m88k_xrf_t));
+	if (fp_reg == nullptr) {
+		free(reg);
+		return LIBCPU_NO_MEMORY;
+	}
 	for (int i = 0; i < 32; i++) {
 		reg->r[i] = 0;
 		fp_reg->x[i].i.hi = 0;
@@ -139,6 +146,8 @@ arch_m88k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	rf->vrf = nullptr;
 
 	LOG("Motorola 88110 initialized.\n");
+
+	return LIBCPU_SUCCESS;
 }
 
 static void

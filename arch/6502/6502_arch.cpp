@@ -32,7 +32,7 @@ static cpu_flags_layout_t arch_6502_flags_layout[] = {
 	{ -1, 0, nullptr }
 };
 
-static void
+static libcpu_status
 arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	assert(offsetof(reg_6502_t, pc) == 5);
@@ -60,6 +60,9 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	reg_6502_t *reg;
 	reg = (reg_6502_t*)malloc(sizeof(reg_6502_t));
+	if (reg == nullptr) {
+		return LIBCPU_NO_MEMORY;
+	}
 	reg->pc = 0;
 	reg->a = 0;
 	reg->x = 0;
@@ -69,6 +72,8 @@ arch_6502_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	rf->pc = &reg->pc;
 	rf->grf = reg;
+
+	return LIBCPU_SUCCESS;
 }
 
 static void

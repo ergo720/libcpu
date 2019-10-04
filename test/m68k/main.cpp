@@ -189,7 +189,11 @@ main(int argc, char **argv) {
 	int ramsize = 65536;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_M68K, 0, 0);
+	if (!LIBCPU_CHECK_SUCCESS(cpu_new(CPU_ARCH_M68K, 0, 0, cpu))) {
+		printf("Failed to initialize libcpu!\n");
+		return 1;
+	}
+
 	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE);
 	cpu_set_flags_debug(cpu, CPU_DEBUG_NONE);
 	cpu_set_ram(cpu, RAM);

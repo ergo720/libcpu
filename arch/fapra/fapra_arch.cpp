@@ -38,7 +38,7 @@ static cpu_register_layout_t arch_fapra_register_layout[] = {
 	{ 0, 32, 0, 0, 0, "R31" },
 };
 
-static void
+static libcpu_status
 arch_fapra_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	// Basic Information
@@ -63,6 +63,9 @@ arch_fapra_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	reg_fapra32_t *reg;
 	reg = (reg_fapra32_t *) malloc(sizeof(reg_fapra32_t));
+	if (reg == nullptr) {
+		return LIBCPU_NO_MEMORY;
+	}
 	for (int i = 0; i < 32; i++)
 		reg->r[i] = 0;
 	reg->pc = 0;
@@ -71,6 +74,8 @@ arch_fapra_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 	cpu->rf.grf = reg;
 
 	LOG("%d bit FAPRA initialized.\n", info->word_size);
+
+	return LIBCPU_SUCCESS;
 }
 
 static void

@@ -22,7 +22,7 @@ static cpu_register_layout_t arch_m68k_register_layout[] = {
 	//{ 0, 32, 0, 0, 0, "PSR" },
 };
 
-static void
+static libcpu_status
 arch_m68k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 {
 	// Basic Information
@@ -50,6 +50,9 @@ arch_m68k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
 	reg_m68k_t *reg;
 	reg = (reg_m68k_t*)malloc(sizeof(reg_m68k_t));
+	if (reg == nullptr) {
+		return LIBCPU_NO_MEMORY;
+	}
 	for (int i=0; i<16; i++) 
 		reg->r[i] = 0;
 
@@ -57,6 +60,8 @@ arch_m68k_init(cpu_t *cpu, cpu_archinfo_t *info, cpu_archrf_t *rf)
 
   rf->pc = &reg->pc;
   rf->grf = reg;
+
+  return LIBCPU_SUCCESS;
 }
 
 static addr_t

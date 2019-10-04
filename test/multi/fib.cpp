@@ -83,7 +83,10 @@ main(int argc, char **argv)
 	ramsize = 5*1024*1024;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(arch, 0, 0);
+	if (!LIBCPU_CHECK_SUCCESS(cpu_new(arch, 0, 0, cpu))) {
+		printf("Failed to initialize libcpu!\n");
+		return 1;
+	}
 
 	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE);
 	cpu_set_flags_debug(cpu, 0

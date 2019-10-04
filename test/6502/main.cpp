@@ -96,8 +96,11 @@ main(int argc, char **argv) {
 	int ramsize = 65536;
 	RAM = (uint8_t*)malloc(ramsize);
 
-	cpu = cpu_new(CPU_ARCH_6502, 0, CPU_6502_BRK_TRAP |
-		CPU_6502_XXX_TRAP | CPU_6502_V_IGNORE);
+	if (!LIBCPU_CHECK_SUCCESS(cpu_new(CPU_ARCH_6502, 0, CPU_6502_BRK_TRAP |
+		CPU_6502_XXX_TRAP | CPU_6502_V_IGNORE, cpu))) {
+		printf("Failed to initialize libcpu!\n");
+		return 1;
+	}
 
 	cpu_set_flags_codegen(cpu, CPU_CODEGEN_OPTIMIZE);
 	cpu_set_flags_debug(cpu, 0
