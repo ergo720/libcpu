@@ -44,7 +44,6 @@ cmake .. -G "Visual Studio 16 2019" -A Win32
 ```
 
 Then build the generated solution file with Visual Studio 2019.  
-Visual Studio 2017 is also known to work.
 
 ## Testing
 
