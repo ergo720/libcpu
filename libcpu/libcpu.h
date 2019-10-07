@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "platform.h"
+#include "interval_tree.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,6 +147,19 @@ enum {
 	CPU_FLAGTYPE_ZERO = 'Z'
 };
 
+// memory region type
+enum mem_type_t {
+	MEM_UNMAPPED,
+	MEM_RAM,
+	MEM_MMIO,
+	MEM_PMIO,
+	MEM_ALIAS,
+};
+
+// mmio/pmio access handlers
+typedef void	(*fp_read)(void *opaque);
+typedef void	(*fp_write)(void *opaque);
+
 typedef struct cpu_flags_layout {
 	int shift;	/* bit position */
 	char type;	/* 'N', 'V', 'Z', 'C' or 0 (some other flag unknown to the generic code) */
@@ -167,6 +181,19 @@ enum {
 	CPU_REGFLAG_PC  = 1,
 	CPU_REGFLAG_NPC = 2,
 	CPU_REGFLAG_PSR = 3
+};
+
+template<typename T>
+struct memory_region_t {
+	T start;
+	int type;
+	int priority;
+	fp_read read_handler;
+	fp_write write_handler;
+	void *opaque;
+	memory_region_t<T> *aliased_region;
+	memory_region_t() : start(0), type(MEM_UNMAPPED), priority(0), read_handler(nullptr), write_handler(nullptr),
+		opaque(nullptr), aliased_region(nullptr) {};
 };
 
 typedef struct cpu_register_layout {
@@ -273,6 +300,9 @@ typedef struct cpu {
 
 	void *feptr; /* This pointer can be used freely by the frontend. */
 
+	std::unique_ptr<interval_tree<addr_t, std::unique_ptr<memory_region_t<addr_t>>>> memory_space_tree;
+	std::unique_ptr<interval_tree<io_port_t, std::unique_ptr<memory_region_t<io_port_t>>>> io_space_tree;
+
 	/* LLVM specific variables */
 	std::unique_ptr<orc::LLLazyJIT> jit;
 	LLVMContext *ctx[1024];
@@ -362,5 +392,10 @@ API_FUNC void cpu_print_statistics(cpu_t *cpu);
 
 /* runs the interactive debugger */
 API_FUNC int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
+
+API_FUNC libcpu_status memory_init_region_ram(cpu_t *cpu, addr_t start, size_t size, int priority);
+API_FUNC libcpu_status memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_read read_func, fp_write write_func, void* opaque, int priority);
+API_FUNC libcpu_status memory_init_region_alias(cpu_t *cpu, addr_t start, size_t size, addr_t aliased_start, size_t aliased_size, int priority);
+API_FUNC libcpu_status memory_destroy_region(cpu_t *cpu, addr_t start, size_t size, bool io_space);
 
 #endif

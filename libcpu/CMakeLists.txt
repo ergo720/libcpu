@@ -16,8 +16,7 @@ ADD_LIBRARY(cpu SHARED
 			stat.cpp
 			sha1.cpp
 			interface.cpp
-			timings.cpp
-			interval_tree.cpp)
+			timings.cpp)
 
 ADD_DEFINITIONS(-DLIBCPU_BUILD_CORE)
 

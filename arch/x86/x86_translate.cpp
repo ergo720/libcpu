@@ -15,7 +15,7 @@
 #include "frontend.h"
 #include "x86_decode.h"
 
-#define BAD fprintf(stderr, "frontend error: unimplemented instruction encountered at line %d\n", __LINE__); exit(1)
+#define BAD fprintf(stderr, "%s: unimplemented instruction encountered at line %d\n", __func__, __LINE__); exit(1)
 
 #define EAX 0
 #define ECX 1

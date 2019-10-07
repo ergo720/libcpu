@@ -5,6 +5,7 @@
 #include "defines.h"
 
 typedef uint64_t addr_t;
+typedef uint16_t io_port_t;
 
 typedef uint16_t tag_t;
 

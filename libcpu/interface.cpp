@@ -132,6 +132,21 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags, cpu_t *&out)
 			return LIBCPU_INVALID_PARAMETER;
 	}
 
+	std::unique_ptr<memory_region_t<addr_t>> mem_region;
+	addr_t start;
+	addr_t end;
+	cpu->memory_space_tree = interval_tree<addr_t, std::unique_ptr<memory_region_t<addr_t>>>::create();
+	start = 0;
+	end = UINT64_MAX;
+	cpu->memory_space_tree->insert(start, end, std::move(mem_region));
+	std::unique_ptr<memory_region_t<io_port_t>> io_region;
+	io_port_t start_io;
+	io_port_t end_io;
+	cpu->io_space_tree = interval_tree<io_port_t, std::unique_ptr<memory_region_t<io_port_t>>>::create();
+	start_io = 0;
+	end_io = UINT16_MAX;
+	cpu->io_space_tree->insert(start_io, end_io, std::move(io_region));
+
 	cpu->code_start = 0;
 	cpu->code_end = 0;
 	cpu->code_entry = 0;
@@ -522,4 +537,199 @@ cpu_print_statistics(cpu_t *cpu)
 	printf("fe  = %8" PRId64 "\n", cpu->timer_total[TIMER_FE]);
 	printf("be  = %8" PRId64 "\n", cpu->timer_total[TIMER_BE]);
 	printf("run = %8" PRId64 "\n", cpu->timer_total[TIMER_RUN]);
+}
+
+libcpu_status
+memory_init_region_ram(cpu_t *cpu, addr_t start, size_t size, int priority)
+{
+	addr_t end;
+	std::unique_ptr<memory_region_t<addr_t>> ram;
+	std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>> out;
+
+	if (size == 0) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
+	end = start + size - 1;
+	cpu->memory_space_tree->search(start, end, out);
+
+	for (auto &region : out) {
+		if (std::get<2>(region)->priority == priority) {
+			return LIBCPU_INVALID_PARAMETER;
+		}
+	}
+
+	ram->start = start;
+	ram->type = MEM_RAM;
+	ram->priority = priority;
+
+	if (cpu->memory_space_tree->insert(start, end, std::move(ram))) {
+		return LIBCPU_SUCCESS;
+	}
+	else {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+}
+
+libcpu_status
+memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_read read_func, fp_write write_func, void *opaque, int priority)
+{
+	bool inserted;
+
+	if (size == 0) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
+	if (io_space) {
+		io_port_t start_io;
+		io_port_t end;
+		std::unique_ptr<memory_region_t<io_port_t>> io;
+		std::set<std::tuple<io_port_t, io_port_t, const std::unique_ptr<memory_region_t<io_port_t>> &>> out;
+
+		if (start > 65535 || (start + size) > 65536) {
+			return LIBCPU_INVALID_PARAMETER;
+		}
+
+		start_io = static_cast<io_port_t>(start);
+		end = start + size - 1;
+		cpu->io_space_tree->search(start_io, end, out);
+
+		for (auto &region : out) {
+			if (std::get<2>(region)->priority == priority) {
+				return LIBCPU_INVALID_PARAMETER;
+			}
+		}
+
+		io->start = start_io;
+		io->type = MEM_PMIO;
+		io->priority = priority;
+		if (read_func) {
+			io->read_handler = read_func;
+		}
+		if (write_func) {
+			io->write_handler = write_func;
+		}
+		if (opaque) {
+			io->opaque = opaque;
+		}
+
+		inserted = cpu->io_space_tree->insert(start_io, end, std::move(io));
+	}
+	else {
+		addr_t end;
+		std::unique_ptr<memory_region_t<addr_t>> io;
+		std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>> out;
+
+		end = start + size - 1;
+		cpu->memory_space_tree->search(start, end, out);
+
+		for (auto &region : out) {
+			if (std::get<2>(region)->priority == priority) {
+				return LIBCPU_INVALID_PARAMETER;
+			}
+		}
+
+		io->start = start;
+		io->type = MEM_MMIO;
+		io->priority = priority;
+		if (read_func) {
+			io->read_handler = read_func;
+		}
+		if (write_func) {
+			io->write_handler = write_func;
+		}
+		if (opaque) {
+			io->opaque = opaque;
+		}
+
+		inserted = cpu->memory_space_tree->insert(start, end, std::move(io));
+	}
+
+	if (inserted) {
+		return LIBCPU_SUCCESS;
+	}
+	else {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+}
+
+// XXX Are aliased regions allowed in the io space as well?
+libcpu_status
+memory_init_region_alias(cpu_t *cpu, addr_t start, size_t size, addr_t aliased_start, size_t aliased_size, int priority)
+{
+	addr_t end;
+	memory_region_t<addr_t> *aliased_region;
+	std::unique_ptr<memory_region_t<addr_t>> alias;
+	std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>> out;
+
+	if (size == 0) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
+	aliased_region = nullptr;
+	end = aliased_start + aliased_size - 1;
+	cpu->memory_space_tree->search(aliased_start, end, out);
+
+	if (out.empty()) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
+	for (auto &region : out) {
+		if ((std::get<0>(region) == aliased_start) && (std::get<1>(region) == end)) {
+			aliased_region = std::get<2>(region).get();
+		}
+	}
+
+	if (!aliased_region) {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+
+	end = start + size - 1;
+	cpu->memory_space_tree->search(start, end, out);
+
+	for (auto &region : out) {
+		if (std::get<2>(region)->priority == priority) {
+			return LIBCPU_INVALID_PARAMETER;
+		}
+	}
+
+	alias->start = start;
+	alias->type = MEM_ALIAS;
+	alias->priority = priority;
+	alias->aliased_region = aliased_region;
+
+	if (cpu->memory_space_tree->insert(start, end, std::move(alias))) {
+		return LIBCPU_SUCCESS;
+	}
+	else {
+		return LIBCPU_INVALID_PARAMETER;
+	}
+}
+
+libcpu_status
+memory_destroy_region(cpu_t *cpu, addr_t start, size_t size, bool io_space)
+{
+	bool deleted;
+
+	if (io_space) {
+		io_port_t start_io;
+		io_port_t end;
+
+		start_io = static_cast<io_port_t>(start);
+		end = start + size - 1;
+		deleted = cpu->io_space_tree->erase(start_io, end);
+	}
+	else {
+		addr_t end;
+
+		end = start + size - 1;
+		deleted = cpu->memory_space_tree->erase(start, end);
+	}
+
+	if (deleted) {
+		return LIBCPU_SUCCESS;
+	}
+	else {
+		return LIBCPU_INVALID_PARAMETER;
+	}
 }
