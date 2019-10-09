@@ -196,9 +196,6 @@ uint32_t RAM32LE(uint8_t *RAM, addr_t a);
 #define LOAD16S(i,v) arch_put_reg(cpu, i, arch_load16_aligned(cpu,v,bb), 16, true, bb)
 #define LOAD32(i,v) arch_put_reg(cpu, i, arch_load32_aligned(cpu,v,bb), 32, true, bb)
 
-#define LOADMEM16(v) arch_load16_aligned(cpu,v,bb)
-#define LOADMEM32(v) arch_load32_aligned(cpu,v,bb)
-
 #define STORE8(v,a) arch_store8(cpu,v, a, bb)
 #define STORE16(v,a) arch_store16(cpu,v, a, bb)
 #define STORE32(v,a) arch_store32_aligned(cpu,v, a, bb)

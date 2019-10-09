@@ -157,8 +157,8 @@ enum mem_type_t {
 };
 
 // mmio/pmio access handlers
-typedef void	(*fp_read)(void *opaque);
-typedef void	(*fp_write)(void *opaque);
+typedef uint32_t	(*fp_read)(addr_t addr, size_t size, void *opaque);
+typedef void		(*fp_write)(addr_t addr, size_t size, uint32_t value, void *opaque);
 
 typedef struct cpu_flags_layout {
 	int shift;	/* bit position */
@@ -194,6 +194,15 @@ struct memory_region_t {
 	memory_region_t<T> *aliased_region;
 	memory_region_t() : start(0), type(MEM_UNMAPPED), priority(0), read_handler(nullptr), write_handler(nullptr),
 		opaque(nullptr), aliased_region(nullptr) {};
+};
+
+template<typename T>
+struct sort_by_priority
+{
+	bool operator() (const std::tuple<T, T, const std::unique_ptr<memory_region_t<T>> &> &lhs, const std::tuple<T, T, const std::unique_ptr<memory_region_t<T>> &> &rhs)
+	{
+		return std::get<2>(lhs)->priority > std::get<2>(rhs)->priority;
+	}
 };
 
 typedef struct cpu_register_layout {
@@ -302,6 +311,8 @@ typedef struct cpu {
 
 	std::unique_ptr<interval_tree<addr_t, std::unique_ptr<memory_region_t<addr_t>>>> memory_space_tree;
 	std::unique_ptr<interval_tree<io_port_t, std::unique_ptr<memory_region_t<io_port_t>>>> io_space_tree;
+	std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>, sort_by_priority<addr_t>> memory_out;
+	std::set<std::tuple<io_port_t, io_port_t, const std::unique_ptr<memory_region_t<io_port_t>> &>, sort_by_priority<io_port_t>> io_out;
 
 	/* LLVM specific variables */
 	std::unique_ptr<orc::LLLazyJIT> jit;
