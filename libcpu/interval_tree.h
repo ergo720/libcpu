@@ -367,7 +367,7 @@ node_t<key, val> *interval_tree<key, val>::rotate_r(node_t<key, val> *node)
 template<typename key, typename val>
 node_t<key, val> *interval_tree<key, val>::rotate_lr(node_t<key, val> *node)
 {
-	node->left = (node->left);
+	node->left = rotate_l(node->left);
 	return rotate_r(node);
 }
 
