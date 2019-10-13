@@ -132,14 +132,14 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags, cpu_t *&out)
 			return LIBCPU_INVALID_PARAMETER;
 	}
 
-	std::unique_ptr<memory_region_t<addr_t>> mem_region;
+	std::unique_ptr<memory_region_t<addr_t>> mem_region(new memory_region_t<addr_t>);
 	addr_t start;
 	addr_t end;
 	cpu->memory_space_tree = interval_tree<addr_t, std::unique_ptr<memory_region_t<addr_t>>>::create();
 	start = 0;
 	end = UINT64_MAX;
 	cpu->memory_space_tree->insert(start, end, std::move(mem_region));
-	std::unique_ptr<memory_region_t<io_port_t>> io_region;
+	std::unique_ptr<memory_region_t<io_port_t>> io_region(new memory_region_t<io_port_t>);
 	io_port_t start_io;
 	io_port_t end_io;
 	cpu->io_space_tree = interval_tree<io_port_t, std::unique_ptr<memory_region_t<io_port_t>>>::create();
@@ -543,7 +543,7 @@ libcpu_status
 memory_init_region_ram(cpu_t *cpu, addr_t start, size_t size, int priority)
 {
 	addr_t end;
-	std::unique_ptr<memory_region_t<addr_t>> ram;
+	std::unique_ptr<memory_region_t<addr_t>> ram(new memory_region_t<addr_t>);
 	std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>> out;
 
 	if (size == 0) {
@@ -583,7 +583,7 @@ memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_r
 	if (io_space) {
 		io_port_t start_io;
 		io_port_t end;
-		std::unique_ptr<memory_region_t<io_port_t>> io;
+		std::unique_ptr<memory_region_t<io_port_t>> io(new memory_region_t<io_port_t>);
 		std::set<std::tuple<io_port_t, io_port_t, const std::unique_ptr<memory_region_t<io_port_t>> &>> out;
 
 		if (start > 65535 || (start + size) > 65536) {
@@ -617,7 +617,7 @@ memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_r
 	}
 	else {
 		addr_t end;
-		std::unique_ptr<memory_region_t<addr_t>> io;
+		std::unique_ptr<memory_region_t<addr_t>> io(new memory_region_t<addr_t>);
 		std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>> out;
 
 		end = start + size - 1;
@@ -659,7 +659,7 @@ memory_init_region_alias(cpu_t *cpu, addr_t start, size_t size, addr_t aliased_s
 {
 	addr_t end;
 	memory_region_t<addr_t> *aliased_region;
-	std::unique_ptr<memory_region_t<addr_t>> alias;
+	std::unique_ptr<memory_region_t<addr_t>> alias(new memory_region_t<addr_t>);
 	std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>> out;
 
 	if (size == 0) {

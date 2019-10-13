@@ -6,6 +6,7 @@
  */
 #include "libcpu.h"
 #include "tag.h"
+#include "x86_internal.h"
 
 void disasm_instr(cpu_t *cpu, addr_t pc) {
 	char disassembly_line1[80];
@@ -15,8 +16,16 @@ void disasm_instr(cpu_t *cpu, addr_t pc) {
 	bytes = cpu->f.disasm_instr(cpu, pc, disassembly_line1, sizeof(disassembly_line1));
 
 	LOG(".,%08llx ", (unsigned long long)pc);
-	for (i=0; i<bytes; i++) {
-		LOG("%02X ", cpu->RAM[pc+i]);
+	// TODO this should probably use a function pointer to an arch specific memory function
+	if (cpu->info.type != CPU_ARCH_X86) {
+		for (i = 0; i < bytes; i++) {
+			LOG("%02X ", cpu->RAM[pc + i]);
+		}
+	}
+	else {
+		for (i = 0; i < bytes; i++) {
+			LOG("%02X ", arch_x86_mem_read8(cpu, &pc));
+		}
 	}
 	LOG("%*s", (24-3*bytes)+1, ""); /* TODO make this arch neutral */
 

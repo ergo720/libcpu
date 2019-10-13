@@ -341,7 +341,7 @@ arch_x86_disasm_instr_intel(cpu_t *cpu, addr_t pc, char *line, unsigned int max_
 	int len = 0;
 
 	assert(((cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) == 1);
-	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0) {
+	if (arch_x86_decode_instr(cpu, &instr, pc)) {
 		fprintf(stderr, "error: unable to decode opcode %x\n", instr.opcode_byte);
 		exit(1);
 	}

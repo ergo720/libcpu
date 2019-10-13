@@ -16,7 +16,7 @@ arch_x86_tag_instr(cpu_t *cpu, addr_t pc, tag_t *tag, addr_t *new_pc, addr_t *ne
 	int len;
 
 	// TODO : Is INTEL_SYNTAX needed during tagging? If not, less opcodes would need to be checked for below.
-	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0)
+	if (arch_x86_decode_instr(cpu, &instr, pc))
 		return -1;
 
 	len = arch_x86_instr_length(&instr);

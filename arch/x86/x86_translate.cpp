@@ -50,55 +50,46 @@
 #define CR_REG_BASE  15
 #define DBG_REG_BASE 20
 
-JIT_EXTERNAL_CALL_C uint32_t
-arch_x86_mem_read(cpu_t *cpu, addr_t addr, size_t size)
+template<typename T>
+T arch_x86_mem_read(cpu_t *cpu, addr_t addr)
 {
 	addr_t end;
 
-	end = addr + size - 1;
+	end = addr + sizeof(T) - 1;
 	cpu->memory_space_tree->search(addr, end, cpu->memory_out);
 
 	if ((addr >= std::get<0>(*cpu->memory_out.begin())) && (end <= std::get<1>(*cpu->memory_out.begin()))) {
 		switch (std::get<2>(*cpu->memory_out.begin())->type)
 		{
 		case MEM_RAM: {
-			switch (size)
-			{
-			case 32: {
-				uint32_t val = cpu->RAM[addr + 0] | (cpu->RAM[addr + 1] << 8) | (cpu->RAM[addr + 2] << 16) | (cpu->RAM[addr + 3] << 24);
-				if (cpu->flags & CPU_FLAG_SWAPMEM) {
+			T val;
+			memcpy(&val, &cpu->RAM[addr], sizeof(T));
+			if (cpu->flags & CPU_FLAG_SWAPMEM && sizeof(T) != 1) {
+				switch (sizeof(T)) {
+				case 4: {
 					val = sys::SwapByteOrder_32(val);
 				}
-				return val;
-			}
+				break;
 
-			case 16: {
-				uint16_t val = cpu->RAM[addr + 0] | (cpu->RAM[addr + 1] << 8);
-				if (cpu->flags & CPU_FLAG_SWAPMEM) {
+				case 2: {
 					val = sys::SwapByteOrder_16(val);
 				}
-				return val;
-			}
+				break;
 
-			case 8: {
-				return cpu->RAM[addr + 0];
+				}
 			}
-
-			default:
-				assert(0 && "arch_x86_mem_read: Invalid bit size\n");
-				return 0xFFFFFFFF;
-			}
+			return val;
 		}
 		break;
 
 		case MEM_MMIO: {
-			uint32_t val = 0xFFFFFFFF;
+			T val = 0;
 			memory_region_t<addr_t> *region = std::get<2>(*cpu->memory_out.begin()).get();
 			if (region->read_handler) {
-				val = region->read_handler(addr, size, region->opaque);
+				val = region->read_handler(addr, sizeof(T), region->opaque);
 			}
 			else {
-				printf("%s: unhandled MMIO read at address $%02llx with size %d\n", __func__, addr, size);
+				printf("%s: unhandled MMIO read at address $%02llx with size %d\n", __func__, addr, sizeof(T));
 			}
 			return val;
 		}
@@ -110,82 +101,66 @@ arch_x86_mem_read(cpu_t *cpu, addr_t addr, size_t size)
 			while (region->aliased_region) {
 				region = region->aliased_region;
 			}
-			return arch_x86_mem_read(cpu, region->start + offset, size);
+			return arch_x86_mem_read<T>(cpu, region->start + offset);
 		}
 		break;
 
 		case MEM_UNMAPPED: {
 			// XXX handle this properly instead of just aborting
-			fprintf(stderr, "%s: memory access to unmapped memory at address $%02llx with size %d\n", __func__, addr, size);
+			fprintf(stderr, "%s: memory access to unmapped memory at address $%02llx with size %d\n", __func__, addr, sizeof(T));
 			exit(1);
 		}
 		break;
 
 		default:
 			assert(0 && "arch_x86_mem_read: unknown region type\n");
-			return 0xFFFFFFFF;
+			return 0;
 		}
 	}
 	else {
 		// XXX handle this properly instead of just aborting
-		fprintf(stderr, "%s: memory access at address $%02llx with size %d is not completely inside a memory region\n", __func__, addr, size);
+		fprintf(stderr, "%s: memory access at address $%02llx with size %d is not completely inside a memory region\n", __func__, addr, sizeof(T));
 		exit(1);
 	}
 }
 
-JIT_EXTERNAL_CALL_C void
-arch_x86_mem_write(cpu_t *cpu, addr_t addr, size_t size, uint32_t value)
+template<typename T>
+void arch_x86_mem_write(cpu_t *cpu, addr_t addr, T value)
 {
 	addr_t end;
 
-	end = addr + size - 1;
+	end = addr + sizeof(T) - 1;
 	cpu->memory_space_tree->search(addr, end, cpu->memory_out);
 
 	if ((addr >= std::get<0>(*cpu->memory_out.begin())) && (end <= std::get<1>(*cpu->memory_out.begin()))) {
 		switch (std::get<2>(*cpu->memory_out.begin())->type)
 		{
 		case MEM_RAM: {
-			switch (size)
-			{
-			case 32: {
-				if (cpu->flags & CPU_FLAG_SWAPMEM) {
+			if (cpu->flags & CPU_FLAG_SWAPMEM && sizeof(T) != 1) {
+				switch (sizeof(T)) {
+				case 4: {
 					value = sys::SwapByteOrder_32(value);
 				}
-				cpu->RAM[addr + 0] = (value & 0x000000FF) >> 0;
-				cpu->RAM[addr + 1] = (value & 0x0000FF00) >> 8;
-				cpu->RAM[addr + 2] = (value & 0x00FF0000) >> 16;
-				cpu->RAM[addr + 3] = (value & 0xFF000000) >> 24;
-			}
-			break;
+				break;
 
-			case 16: {
-				if (cpu->flags & CPU_FLAG_SWAPMEM) {
+				case 2: {
 					value = sys::SwapByteOrder_16(value);
 				}
-				cpu->RAM[addr + 0] = (value & 0x000000FF) >> 0;
-				cpu->RAM[addr + 1] = (value & 0x0000FF00) >> 8;
-			}
-			break;
+				break;
 
-			case 8: {
-				cpu->RAM[addr + 0] = (value & 0x000000FF) >> 0;
+				}
 			}
-			break;
-
-			default:
-				assert(0 && "arch_x86_mem_write: Invalid bit size\n");
-				return;
-			}
+			memcpy(&cpu->RAM[addr], &value, sizeof(T));
 		}
 		break;
 
 		case MEM_MMIO: {
 			memory_region_t<addr_t> *region = std::get<2>(*cpu->memory_out.begin()).get();
 			if (region->write_handler) {
-				region->write_handler(addr, size, value, region->opaque);
+				region->write_handler(addr, sizeof(T), value, region->opaque);
 			}
 			else {
-				printf("%s: unhandled MMIO write at address $%02llx with size %d\n", __func__, addr, size);
+				printf("%s: unhandled MMIO write at address $%02llx with size %d\n", __func__, addr, sizeof(T));
 			}
 		}
 		break;
@@ -196,13 +171,13 @@ arch_x86_mem_write(cpu_t *cpu, addr_t addr, size_t size, uint32_t value)
 			while (region->aliased_region) {
 				region = region->aliased_region;
 			}
-			arch_x86_mem_write(cpu, region->start + offset, size, value);
+			arch_x86_mem_write<T>(cpu, region->start + offset, value);
 		}
 		break;
 
 		case MEM_UNMAPPED: {
 			// XXX handle this properly instead of just aborting
-			fprintf(stderr, "%s: memory access to unmapped memory at address $%02llx with size %d\n", __func__, addr, size);
+			fprintf(stderr, "%s: memory access to unmapped memory at address $%02llx with size %d\n", __func__, addr, sizeof(T));
 			exit(1);
 		}
 		break;
@@ -214,30 +189,72 @@ arch_x86_mem_write(cpu_t *cpu, addr_t addr, size_t size, uint32_t value)
 	}
 	else {
 		// XXX handle this properly instead of just aborting
-		fprintf(stderr, "%s: memory access at address $%02llx with size %d is not completely inside a memory region\n", __func__, addr, size);
+		fprintf(stderr, "%s: memory access at address $%02llx with size %d is not completely inside a memory region\n", __func__, addr, sizeof(T));
 		exit(1);
 	}
 }
 
+JIT_EXTERNAL_CALL_C uint8_t
+arch_x86_mem_read8(cpu_t *cpu, addr_t *addr)
+{
+	addr_t start = *addr;
+	(*addr) += 1;
+	return arch_x86_mem_read<uint8_t>(cpu, start);
+}
+
+JIT_EXTERNAL_CALL_C uint16_t
+arch_x86_mem_read16(cpu_t *cpu, addr_t *addr)
+{
+	addr_t start = *addr;
+	(*addr) += 2;
+	return arch_x86_mem_read<uint16_t>(cpu, start);
+}
+
 JIT_EXTERNAL_CALL_C uint32_t
-arch_x86_io_read(cpu_t *cpu, io_port_t addr, size_t size)
+arch_x86_mem_read32(cpu_t *cpu, addr_t *addr)
+{
+	addr_t start = *addr;
+	(*addr) += 4;
+	return arch_x86_mem_read<uint32_t>(cpu, start);
+}
+
+JIT_EXTERNAL_CALL_C void
+arch_x86_mem_write8(cpu_t *cpu, addr_t addr, uint8_t value)
+{
+	arch_x86_mem_write<uint8_t>(cpu, addr, value);
+}
+
+JIT_EXTERNAL_CALL_C void
+arch_x86_mem_write16(cpu_t *cpu, addr_t addr, uint16_t value)
+{
+	arch_x86_mem_write<uint16_t>(cpu, addr, value);
+}
+
+JIT_EXTERNAL_CALL_C void
+arch_x86_mem_write32(cpu_t *cpu, addr_t addr, uint32_t value)
+{
+	arch_x86_mem_write<uint32_t>(cpu, addr, value);
+}
+
+template<typename T>
+T arch_x86_io_read(cpu_t *cpu, io_port_t addr)
 {
 	io_port_t end;
 
-	end = addr + size - 1;
+	end = addr + sizeof(T) - 1;
 	cpu->io_space_tree->search(addr, end, cpu->io_out);
 
 	if ((addr >= std::get<0>(*cpu->io_out.begin())) && (end <= std::get<1>(*cpu->io_out.begin()))) {
 		switch (std::get<2>(*cpu->io_out.begin())->type)
 		{
 		case MEM_PMIO: {
-			uint32_t val = 0xFFFFFFFF;
+			T val = 0;
 			memory_region_t<io_port_t> *region = std::get<2>(*cpu->io_out.begin()).get();
 			if (region->read_handler) {
-				val = region->read_handler(addr, size, region->opaque);
+				val = region->read_handler(addr, sizeof(T), region->opaque);
 			}
 			else {
-				printf("%s: unhandled PMIO read at address $%02hx with size %d\n", __func__, addr, size);
+				printf("%s: unhandled PMIO read at address $%02hx with size %d\n", __func__, addr, sizeof(T));
 			}
 			return val;
 		}
@@ -245,29 +262,29 @@ arch_x86_io_read(cpu_t *cpu, io_port_t addr, size_t size)
 
 		case MEM_UNMAPPED: {
 			// XXX handle this properly instead of just aborting
-			fprintf(stderr, "%s: memory access to unmapped memory at address $%02hx with size %d\n", __func__, addr, size);
+			fprintf(stderr, "%s: memory access to unmapped memory at address $%02hx with size %d\n", __func__, addr, sizeof(T));
 			exit(1);
 		}
 		break;
 
 		default:
 			assert(0 && "arch_x86_io_read: unknown region type\n");
-			return 0xFFFFFFFF;
+			return 0;
 		}
 	}
 	else {
 		// XXX handle this properly instead of just aborting
-		fprintf(stderr, "%s: io access at address $%02hx with size %d is not completely inside a memory region\n", __func__, addr, size);
+		fprintf(stderr, "%s: io access at address $%02hx with size %d is not completely inside a memory region\n", __func__, addr, sizeof(T));
 		exit(1);
 	}
 }
 
-JIT_EXTERNAL_CALL_C void
-arch_x86_io_write(cpu_t *cpu, io_port_t addr, size_t size, uint32_t value)
+template<typename T>
+void arch_x86_io_write(cpu_t *cpu, io_port_t addr, T value)
 {
 	io_port_t end;
 
-	end = addr + size - 1;
+	end = addr + sizeof(T) - 1;
 	cpu->io_space_tree->search(addr, end, cpu->io_out);
 
 	if ((addr >= std::get<0>(*cpu->io_out.begin())) && (end <= std::get<1>(*cpu->io_out.begin()))) {
@@ -276,17 +293,17 @@ arch_x86_io_write(cpu_t *cpu, io_port_t addr, size_t size, uint32_t value)
 		case MEM_PMIO: {
 			memory_region_t<io_port_t> *region = std::get<2>(*cpu->io_out.begin()).get();
 			if (region->write_handler) {
-				region->write_handler(addr, size, value, region->opaque);
+				region->write_handler(addr, sizeof(T), value, region->opaque);
 			}
 			else {
-				printf("%s: unhandled PMIO write at address $%02hx with size %d\n", __func__, addr, size);
+				printf("%s: unhandled PMIO write at address $%02hx with size %d\n", __func__, addr, sizeof(T));
 			}
 		}
 		break;
 
 		case MEM_UNMAPPED: {
 			// XXX handle this properly instead of just aborting
-			fprintf(stderr, "%s: memory access to unmapped memory at address $%02hx with size %d\n", __func__, addr, size);
+			fprintf(stderr, "%s: memory access to unmapped memory at address $%02hx with size %d\n", __func__, addr, sizeof(T));
 			exit(1);
 		}
 		break;
@@ -298,9 +315,45 @@ arch_x86_io_write(cpu_t *cpu, io_port_t addr, size_t size, uint32_t value)
 	}
 	else {
 		// XXX handle this properly instead of just aborting
-		fprintf(stderr, "%s: io access at address $%02hx with size %d is not completely inside a memory region\n", __func__, addr, size);
+		fprintf(stderr, "%s: io access at address $%02hx with size %d is not completely inside a memory region\n", __func__, addr, sizeof(T));
 		exit(1);
 	}
+}
+
+JIT_EXTERNAL_CALL_C uint8_t
+arch_x86_io_read8(cpu_t *cpu, io_port_t addr)
+{
+	return arch_x86_io_read<uint8_t>(cpu, addr);
+}
+
+JIT_EXTERNAL_CALL_C uint16_t
+arch_x86_io_read16(cpu_t *cpu, io_port_t addr)
+{
+	return arch_x86_io_read<uint16_t>(cpu, addr);
+}
+
+JIT_EXTERNAL_CALL_C uint32_t
+arch_x86_io_read32(cpu_t *cpu, io_port_t addr)
+{
+	return arch_x86_io_read<uint32_t>(cpu, addr);
+}
+
+JIT_EXTERNAL_CALL_C void
+arch_x86_io_write8(cpu_t *cpu, io_port_t addr, uint8_t value)
+{
+	arch_x86_io_write<uint8_t>(cpu, addr, value);
+}
+
+JIT_EXTERNAL_CALL_C void
+arch_x86_io_wrie16(cpu_t *cpu, io_port_t addr, uint16_t value)
+{
+	arch_x86_io_write<uint16_t>(cpu, addr, value);
+}
+
+JIT_EXTERNAL_CALL_C void
+arch_x86_io_write32(cpu_t *cpu, io_port_t addr, uint32_t value)
+{
+	arch_x86_io_write<uint32_t>(cpu, addr, value);
 }
 
 static Value *
@@ -749,7 +802,7 @@ arch_x86_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 	struct x86_instr instr;
 
 	// TODO : Is INTEL_SYNTAX needed during translation? If not, less opcodes would need to be checked for below.
-	if (arch_x86_decode_instr(&instr, cpu->RAM, pc, (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT) != 0)
+	if (arch_x86_decode_instr(cpu, &instr, pc))
 		return -1;
 
 	switch (instr.opcode) {

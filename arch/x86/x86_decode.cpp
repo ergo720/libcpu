@@ -7,6 +7,7 @@
 #include "libcpu.h"
 #include "x86_isa.h"
 #include "x86_decode.h"
+#include "x86_internal.h"
 
 // Macro's to select either side of a tuple expressed as (left:right)
 #define TUPLE_LEFT(L_R) (true?L_R) 
@@ -919,117 +920,35 @@ decode_src_operand(struct x86_instr *instr)
 	}
 }
 
-static uint8_t read_u8(uint8_t* RAM, addr_t *pc)
-{
-	addr_t new_pc = *pc;
-
-	uint8_t ret = (uint8_t)RAM[new_pc++];
-
-	*pc = new_pc;
-
-	return ret;
-}
-
-static int8_t read_s8(uint8_t* RAM, addr_t *pc)
-{
-	addr_t new_pc = *pc;
-
-	int8_t ret = (int8_t)RAM[new_pc++];
-
-	*pc = new_pc;
-
-	return ret;
-}
-
-static uint16_t read_u16(uint8_t* RAM, addr_t *pc)
-{
-	addr_t new_pc = *pc;
-
-	uint8_t lo = RAM[new_pc++];
-	uint8_t hi = RAM[new_pc++];
-
-	uint16_t ret = (uint16_t)((hi << 8) | lo);
-
-	*pc = new_pc;
-
-	return ret;
-}
-
-static int16_t read_s16(uint8_t* RAM, addr_t *pc)
-{
-	addr_t new_pc = *pc;
-
-	uint8_t lo = RAM[new_pc++];
-	uint8_t hi = RAM[new_pc++];
-
-	int16_t ret = (int16_t)((hi << 8) | lo);
-
-	*pc = new_pc;
-
-	return ret;
-}
-
-static uint32_t read_u32(uint8_t* RAM, addr_t* pc)
-{
-	addr_t new_pc = *pc;
-
-	uint8_t byte1 = RAM[new_pc++];
-	uint8_t byte2 = RAM[new_pc++];
-	uint8_t byte3 = RAM[new_pc++];
-	uint8_t byte4 = RAM[new_pc++];
-
-	uint32_t ret = (uint32_t)((byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1);
-
-	*pc = new_pc;
-
-	return ret;
-}
-
-static int32_t read_s32(uint8_t* RAM, addr_t* pc)
-{
-	addr_t new_pc = *pc;
-
-	uint8_t byte1 = RAM[new_pc++];
-	uint8_t byte2 = RAM[new_pc++];
-	uint8_t byte3 = RAM[new_pc++];
-	uint8_t byte4 = RAM[new_pc++];
-
-	int32_t ret = (int32_t)((byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1);
-
-	*pc = new_pc;
-
-	return ret;
-}
-
 static void
-decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+decode_imm(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 {
 	switch (instr->flags & (SRC_IMM8 | SRC_IMM48 | OP3_IMM_MASK | DST_IMM16)) {
 	case SRC_IMM8:
-		instr->imm_data[0] = read_u8(RAM, pc);
+		instr->imm_data[0] = arch_x86_mem_read8(cpu, pc);
 		return;
 	case SRC_IMM48: // far JMP and far CALL instr
 		if (instr->flags & WIDTH_DWORD) {
-			instr->imm_data[0] = read_u32(RAM, pc);
+			instr->imm_data[0] = arch_x86_mem_read32(cpu, pc);
 		}
 		else {
-			instr->imm_data[0] = read_u16(RAM, pc);
+			instr->imm_data[0] = arch_x86_mem_read16(cpu, pc);
 		}
-		instr->imm_data[1] = read_u16(RAM, pc);
+		instr->imm_data[1] = arch_x86_mem_read16(cpu, pc);
 		return;
 	case SRC_IMM8|DST_IMM16: // ENTER instr
-		instr->imm_data[1] = read_u16(RAM, pc);
-		instr->imm_data[0] = read_u8(RAM, pc);
+		instr->imm_data[1] = arch_x86_mem_read16(cpu, pc);
+		instr->imm_data[0] = arch_x86_mem_read8(cpu, pc);
 		return;
 	case OP3_IMM8:
-		instr->imm_data[0] = read_u8(RAM, pc);
+		instr->imm_data[0] = arch_x86_mem_read8(cpu, pc);
 		return;
 	case OP3_IMM:
 		if (instr->flags & WIDTH_DWORD) {
-			instr->imm_data[0] = read_u32(RAM, pc);
+			instr->imm_data[0] = arch_x86_mem_read32(cpu, pc);
 		}
 		else {
-			instr->imm_data[0] = read_u16(RAM, pc);
+			instr->imm_data[0] = arch_x86_mem_read16(cpu, pc);
 		}
 		return;
 	default:
@@ -1039,13 +958,13 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 	switch (instr->flags & WIDTH_MASK) {
 	// TODO case WIDTH_QWORD:
 	case WIDTH_DWORD:
-		instr->imm_data[0] = read_u32(RAM, pc);
+		instr->imm_data[0] = arch_x86_mem_read32(cpu, pc);
 		break;
 	case WIDTH_WORD:
-		instr->imm_data[0] = read_u16(RAM, pc);
+		instr->imm_data[0] = arch_x86_mem_read16(cpu, pc);
 		break;
 	case WIDTH_BYTE:
-		instr->imm_data[0] = read_u8(RAM, pc);
+		instr->imm_data[0] = arch_x86_mem_read8(cpu, pc);
 		break;
 	default:
 		break;
@@ -1053,18 +972,18 @@ decode_imm(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 }
 
 static void
-decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+decode_rel(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 {
 	switch (instr->flags & WIDTH_MASK) {
 	// TODO case WIDTH_QWORD:
 	case WIDTH_DWORD:
-		instr->rel_data[0] = read_s32(RAM, pc);
+		instr->rel_data[0] = (int32_t)arch_x86_mem_read32(cpu, pc);
 		break;
 	case WIDTH_WORD:
-		instr->rel_data[0] = read_s16(RAM, pc);
+		instr->rel_data[0] = (int16_t)arch_x86_mem_read16(cpu, pc);
 		break;
 	case WIDTH_BYTE:
-		instr->rel_data[0] = read_s8(RAM, pc);
+		instr->rel_data[0] = (int8_t)arch_x86_mem_read8(cpu, pc);
 		break;
 	default:
 		break;
@@ -1072,31 +991,31 @@ decode_rel(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
 }
 
 static void
-decode_moffset(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+decode_moffset(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 {
 	if (instr->addr_size_override == 0) {
-		instr->disp = read_u32(RAM, pc);
+		instr->disp = arch_x86_mem_read32(cpu, pc);
 	}
 	else {
-		instr->disp = read_u16(RAM, pc);
+		instr->disp = arch_x86_mem_read16(cpu, pc);
 	}
 }
 
 static void
-decode_disp(struct x86_instr *instr, uint8_t* RAM, addr_t *pc)
+decode_disp(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 {
 	switch (instr->flags & MEM_DISP_MASK) {
 	case SRC_MEM_DISP_DWORD:
 	case DST_MEM_DISP_DWORD:
-		instr->disp = read_s32(RAM, pc);
+		instr->disp = (int32_t)arch_x86_mem_read32(cpu, pc);
 		break;
 	case SRC_MEM_DISP_WORD:
 	case DST_MEM_DISP_WORD:
-		instr->disp	= read_s16(RAM, pc);
+		instr->disp	= (int16_t)arch_x86_mem_read16(cpu, pc);
 		break;
 	case SRC_MEM_DISP_BYTE:
 	case DST_MEM_DISP_BYTE:
-		instr->disp	= read_s8(RAM, pc);
+		instr->disp	= (int8_t)arch_x86_mem_read8(cpu, pc);
 		break;
 	}
 }
@@ -1250,7 +1169,7 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 }
 
 int
-arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel)
+arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 {
 	addr_t start_pc;
 	unsigned decode_group;
@@ -1258,6 +1177,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	uint64_t decode;
 	arch_x86_opcode opcode;
 	uint8_t bits;
+	char use_intel;
 
 	/* Set default values into the decoded x86 instruction struct */
 	*instr = { 0 };
@@ -1265,7 +1185,8 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	// Start decoding here, initially using decode_table_one :
 	start_pc = pc;
 	decode_group = 0;
-	instr_byte = read_u8(RAM, &pc);
+	use_intel = (cpu->flags_debug & CPU_DEBUG_INTEL_SYNTAX) >> CPU_DEBUG_INTEL_SYNTAX_SHIFT;
+	instr_byte = arch_x86_mem_read8(cpu, &pc);
 	while(true) {
 		decode = decode_tables[decode_group][instr_byte];
 		opcode = (arch_x86_opcode)GET_FIELD(decode, X86_OPCODE);
@@ -1281,13 +1202,13 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 				// Recognize prefix byte 0x0F; Run the next byte through decode_table_two :
 				if (instr_byte == 0x0F) // Equivalent to: if (bits == IS_TWO_BYTE_INSTR)
 					decode_group = 1; // Use decode_table_two (instr->is_two_byte_instr is already set above via prefix_values[])
-				instr_byte = read_u8(RAM, &pc);
+				instr_byte = arch_x86_mem_read8(cpu, &pc);
 				continue; // repeat loop
 			case X86_DECODE_CLASS_GROUP:
 				// Do an extension group side-step, by repeating the decodeing using the indicated group and index :
 				instr->opcode_byte = instr_byte;
 				instr->flags = decode; // Initially, use the flags mentioned together with the group reference (group entries may have deviations)
-				decode_modrm_fields(instr, read_u8(RAM, &pc));
+				decode_modrm_fields(instr, arch_x86_mem_read8(cpu, &pc));
 				decode_group = GET_FIELD(decode, X86_DECODE_GROUP);
 				instr_byte = instr->reg_opc;
 				continue; // repeat loop
@@ -1309,7 +1230,7 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 		instr->opcode_byte = instr_byte;
 		instr->flags |= decode & ~GET_MASK(X86_OPCODE);
 		if (instr->flags & MOD_RM) {
-			decode_modrm_fields(instr, read_u8(RAM, &pc));
+			decode_modrm_fields(instr, arch_x86_mem_read8(cpu, &pc));
 			decode_modrm_addr_modes(instr);
 		}
 	} else { // Read from grp*_decode_table
@@ -1334,19 +1255,19 @@ arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use
 	}
 
 	if (instr->flags & SIB)
-		decode_sib_byte(instr, read_u8(RAM, &pc));
+		decode_sib_byte(instr, arch_x86_mem_read8(cpu, &pc));
 
 	if (instr->flags & MEM_DISP_MASK)
-		decode_disp(instr, RAM, &pc);
+		decode_disp(cpu, instr, &pc);
 
 	if (instr->flags & MOFFSET_MASK)
-		decode_moffset(instr, RAM, &pc);
+		decode_moffset(cpu, instr, &pc);
 
 	if (instr->flags & IMM_MASK)
-		decode_imm(instr, RAM, &pc);
+		decode_imm(cpu, instr, &pc);
 
 	if (instr->flags & REL_MASK)
-		decode_rel(instr, RAM, &pc);
+		decode_rel(cpu, instr, &pc);
 
 	decode_src_operand(instr);
 

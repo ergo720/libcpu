@@ -140,7 +140,7 @@ main(int argc, char **argv)
 		printf("Size of binary file \"%s\" detected as zero!\n", executable.c_str());
 		return 1;
 	}
-	else if (code_start + length > ramsize) {
+	else if (length > ramsize - code_start) {
 		printf("Binary file \"%s\" doesn't fit inside RAM!\n", executable.c_str());
 		return 1;
 	}
@@ -170,9 +170,14 @@ main(int argc, char **argv)
 	
 	cpu->code_start = code_start;
 	cpu->code_end = cpu->code_start + (addr_t)length;
-	cpu->code_entry = cpu->code_start + code_entry;
+	cpu->code_entry = code_entry;
 	ifs.read((char*)&RAM[cpu->code_start], length);
 	ifs.close();
+
+	if (!LIBCPU_CHECK_SUCCESS(memory_init_region_ram(cpu, 0, ramsize, 1))) {
+		printf("Failed to initialize ram memory!\n");
+		return 1;
+	}
 
 	cpu_tag(cpu, cpu->code_entry);
 

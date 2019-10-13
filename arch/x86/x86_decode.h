@@ -215,7 +215,7 @@ struct x86_instr { /* Instances of x86_instr are populated in arch_x86_decode_in
 };
 
 int
-arch_x86_decode_instr(struct x86_instr *instr, uint8_t* RAM, addr_t pc, char use_intel);
+arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc);
 
 int
 arch_x86_instr_length(struct x86_instr *instr);
