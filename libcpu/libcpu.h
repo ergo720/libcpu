@@ -191,8 +191,9 @@ struct memory_region_t {
 	fp_read read_handler;
 	fp_write write_handler;
 	void *opaque;
+	addr_t alias_offset;
 	memory_region_t<T> *aliased_region;
-	memory_region_t() : start(0), type(MEM_UNMAPPED), priority(0), read_handler(nullptr), write_handler(nullptr),
+	memory_region_t() : start(0), alias_offset(0), type(MEM_UNMAPPED), priority(0), read_handler(nullptr), write_handler(nullptr),
 		opaque(nullptr), aliased_region(nullptr) {};
 };
 
@@ -406,7 +407,7 @@ API_FUNC int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
 
 API_FUNC libcpu_status memory_init_region_ram(cpu_t *cpu, addr_t start, size_t size, int priority);
 API_FUNC libcpu_status memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_read read_func, fp_write write_func, void* opaque, int priority);
-API_FUNC libcpu_status memory_init_region_alias(cpu_t *cpu, addr_t start, size_t size, addr_t aliased_start, size_t aliased_size, int priority);
+API_FUNC libcpu_status memory_init_region_alias(cpu_t *cpu, addr_t alias_start, addr_t ori_start, size_t ori_size, int priority);
 API_FUNC libcpu_status memory_destroy_region(cpu_t *cpu, addr_t start, size_t size, bool io_space);
 
 #endif

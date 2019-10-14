@@ -125,6 +125,14 @@ main(int argc, char **argv)
 		}
 	}
 
+#if TEST386_ASM
+
+	ramsize = 1 * 1024 * 1024;
+	code_start = 0xF0000;
+	code_entry = 0xFFFF0;
+
+#endif
+
 	/* load code */
 	std::ifstream ifs(executable, std::ios_base::in | std::ios_base::binary);
 	if (!ifs.is_open()) {
@@ -174,10 +182,28 @@ main(int argc, char **argv)
 	ifs.read((char*)&RAM[cpu->code_start], length);
 	ifs.close();
 
+#if TEST386_ASM
+
 	if (!LIBCPU_CHECK_SUCCESS(memory_init_region_ram(cpu, 0, ramsize, 1))) {
 		printf("Failed to initialize ram memory!\n");
 		return 1;
 	}
+
+	if (!LIBCPU_CHECK_SUCCESS(memory_init_region_alias(cpu, 0xFFFF0000, 0xF0000, 0x10000, 1))) {
+		printf("Failed to initialize aliased ram memory!\n");
+		return 1;
+	}
+
+	((reg_x86_t *)(cpu->rf.grf))->eip = 0xFFFFFFF0;
+
+#else
+
+	if (!LIBCPU_CHECK_SUCCESS(memory_init_region_ram(cpu, 0, ramsize, 1))) {
+		printf("Failed to initialize ram memory!\n");
+		return 1;
+	}
+
+#endif
 
 	cpu_tag(cpu, cpu->code_entry);
 

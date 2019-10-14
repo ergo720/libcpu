@@ -591,7 +591,7 @@ memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_r
 		}
 
 		start_io = static_cast<io_port_t>(start);
-		end = start + size - 1;
+		end = start_io + size - 1;
 		cpu->io_space_tree->search(start_io, end, out);
 
 		for (auto &region : out) {
@@ -655,28 +655,29 @@ memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_r
 
 // XXX Are aliased regions allowed in the io space as well?
 libcpu_status
-memory_init_region_alias(cpu_t *cpu, addr_t start, size_t size, addr_t aliased_start, size_t aliased_size, int priority)
+memory_init_region_alias(cpu_t *cpu, addr_t alias_start, addr_t ori_start, size_t ori_size, int priority)
 {
 	addr_t end;
 	memory_region_t<addr_t> *aliased_region;
 	std::unique_ptr<memory_region_t<addr_t>> alias(new memory_region_t<addr_t>);
 	std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>> out;
 
-	if (size == 0) {
+	if (ori_size == 0) {
 		return LIBCPU_INVALID_PARAMETER;
 	}
 
 	aliased_region = nullptr;
-	end = aliased_start + aliased_size - 1;
-	cpu->memory_space_tree->search(aliased_start, end, out);
+	end = ori_start + ori_size - 1;
+	cpu->memory_space_tree->search(ori_start, end, out);
 
 	if (out.empty()) {
 		return LIBCPU_INVALID_PARAMETER;
 	}
 
 	for (auto &region : out) {
-		if ((std::get<0>(region) == aliased_start) && (std::get<1>(region) == end)) {
+		if ((std::get<0>(region) <= ori_start) && (std::get<1>(region) >= end)) {
 			aliased_region = std::get<2>(region).get();
+			break;
 		}
 	}
 
@@ -684,8 +685,8 @@ memory_init_region_alias(cpu_t *cpu, addr_t start, size_t size, addr_t aliased_s
 		return LIBCPU_INVALID_PARAMETER;
 	}
 
-	end = start + size - 1;
-	cpu->memory_space_tree->search(start, end, out);
+	end = alias_start + ori_size - 1;
+	cpu->memory_space_tree->search(alias_start, end, out);
 
 	for (auto &region : out) {
 		if (std::get<2>(region)->priority == priority) {
@@ -693,12 +694,13 @@ memory_init_region_alias(cpu_t *cpu, addr_t start, size_t size, addr_t aliased_s
 		}
 	}
 
-	alias->start = start;
+	alias->start = alias_start;
+	alias->alias_offset = ori_start - aliased_region->start;
 	alias->type = MEM_ALIAS;
 	alias->priority = priority;
 	alias->aliased_region = aliased_region;
 
-	if (cpu->memory_space_tree->insert(start, end, std::move(alias))) {
+	if (cpu->memory_space_tree->insert(alias_start, end, std::move(alias))) {
 		return LIBCPU_SUCCESS;
 	}
 	else {

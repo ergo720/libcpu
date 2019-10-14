@@ -97,11 +97,12 @@ T arch_x86_mem_read(cpu_t *cpu, addr_t addr)
 
 		case MEM_ALIAS: {
 			memory_region_t<addr_t> *region = std::get<2>(*cpu->memory_out.begin()).get();
-			addr_t offset = addr - region->start;
+			addr_t alias_offset = region->alias_offset;
 			while (region->aliased_region) {
 				region = region->aliased_region;
+				alias_offset += region->alias_offset;
 			}
-			return arch_x86_mem_read<T>(cpu, region->start + offset);
+			return arch_x86_mem_read<T>(cpu, region->start + alias_offset + (addr - std::get<0>(*cpu->memory_out.begin())));
 		}
 		break;
 
@@ -167,11 +168,12 @@ void arch_x86_mem_write(cpu_t *cpu, addr_t addr, T value)
 
 		case MEM_ALIAS: {
 			memory_region_t<addr_t> *region = std::get<2>(*cpu->memory_out.begin()).get();
-			addr_t offset = addr - region->start;
+			addr_t alias_offset = region->alias_offset;
 			while (region->aliased_region) {
 				region = region->aliased_region;
+				alias_offset += region->alias_offset;
 			}
-			arch_x86_mem_write<T>(cpu, region->start + offset, value);
+			arch_x86_mem_write<T>(cpu, region->start + alias_offset + (addr - std::get<0>(*cpu->memory_out.begin())), value);
 		}
 		break;
 
@@ -1027,5 +1029,6 @@ arch_x86_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb)
 		fprintf(stderr, "INVALID %s:%d\n", __func__, __LINE__);
 		exit(1);
 	}
+
 	return 0;
 }
