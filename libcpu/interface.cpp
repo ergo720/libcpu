@@ -234,21 +234,22 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags, cpu_t *&out)
 		cpu_free(cpu);
 		return LIBCPU_NO_MEMORY;
 	}
-	const auto& tt = cpu->mod[cpu->functions]->getTargetTriple();
-	orc::JITTargetMachineBuilder jtmb =
-		tt.empty() ? *orc::JITTargetMachineBuilder::detectHost()
-		: orc::JITTargetMachineBuilder(Triple(tt));
+	auto jtmb = orc::JITTargetMachineBuilder::detectHost();
+	if (!jtmb) {
+		cpu_free(cpu);
+		return LIBCPU_LLVM_INTERNAL_ERROR;
+	}
 	SubtargetFeatures features;
 	StringMap<bool> host_features;
 	if (sys::getHostCPUFeatures(host_features))
 		for (auto &F : host_features) {
 			features.AddFeature(F.first(), F.second);
 		}
-	jtmb.setCPU(sys::getHostCPUName())
+	jtmb->setCPU(sys::getHostCPUName())
 		.addFeatures(features.getFeatures())
 		.setRelocationModel(None)
 		.setCodeModel(None);
-	auto dl = jtmb.getDefaultDataLayoutForTarget();
+	auto dl = jtmb->getDefaultDataLayoutForTarget();
 	if (!dl) {
 		cpu_free(cpu);
 		return LIBCPU_LLVM_INTERNAL_ERROR;
@@ -259,7 +260,7 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags, cpu_t *&out)
 		return LIBCPU_NO_MEMORY;
 	}
 	// XXX use sys::getHostNumPhysicalCores from LLVM to exclude logical cores?
-	auto lazyjit = orc::LLLazyJIT::Create(std::move(jtmb), *dl, NULL, std::thread::hardware_concurrency());
+	auto lazyjit = orc::LLLazyJIT::Create(std::move(*jtmb), *dl, NULL, std::thread::hardware_concurrency());
 	if (!lazyjit) {
 		cpu_free(cpu);
 		return LIBCPU_LLVM_INTERNAL_ERROR;
@@ -268,6 +269,10 @@ cpu_new(cpu_arch_t arch, uint32_t flags, uint32_t arch_flags, cpu_t *&out)
 	cpu->jit->setPartitionFunction(orc::CompileOnDemandLayer::compileRequested);
 	cpu->jit->getMainJITDylib().setGenerator(
 		*orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(*dl));
+#ifdef _WIN32
+	// Workaround for LLVM bug D65548
+	cpu->jit->getObjLinkingLayer().setOverrideObjectFlagsWithResponsibilityFlags(true);
+#endif
 
 	// check if FP80 and FP128 are supported by this architecture.
 	// XXX there is a better way to do this?
