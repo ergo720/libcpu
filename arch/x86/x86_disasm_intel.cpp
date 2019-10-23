@@ -208,6 +208,10 @@ static const char *to_dbg_reg_name(struct x86_instr *instr, unsigned int reg_num
 static const char *check_prefix_override(struct x86_instr *instr)
 {
 	switch (instr->opcode) {
+	case X86_OPC_CMPXCHG8B:
+		if (instr->is_two_byte_instr == 1)
+			return "QWORD PTR ";
+		break;
 	case X86_OPC_LES:
 	case X86_OPC_LDS:
 		if (instr->is_two_byte_instr == 0)

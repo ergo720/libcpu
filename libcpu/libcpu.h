@@ -310,6 +310,8 @@ typedef struct cpu {
 
 	void *feptr; /* This pointer can be used freely by the frontend. */
 
+	/* x86 specific variables */
+	uint8_t prot; /* 1 when in protected mode */
 	std::unique_ptr<interval_tree<addr_t, std::unique_ptr<memory_region_t<addr_t>>>> memory_space_tree;
 	std::unique_ptr<interval_tree<io_port_t, std::unique_ptr<memory_region_t<io_port_t>>>> io_space_tree;
 	std::set<std::tuple<addr_t, addr_t, const std::unique_ptr<memory_region_t<addr_t>> &>, sort_by_priority<addr_t>> memory_out;
@@ -405,6 +407,7 @@ API_FUNC void cpu_print_statistics(cpu_t *cpu);
 /* runs the interactive debugger */
 API_FUNC int cpu_debugger(cpu_t *cpu, debug_function_t debug_function);
 
+/* for now, these only have an effect on the x86 arch */
 API_FUNC libcpu_status memory_init_region_ram(cpu_t *cpu, addr_t start, size_t size, int priority);
 API_FUNC libcpu_status memory_init_region_io(cpu_t *cpu, addr_t start, size_t size, bool io_space, fp_read read_func, fp_write write_func, void* opaque, int priority);
 API_FUNC libcpu_status memory_init_region_alias(cpu_t *cpu, addr_t alias_start, addr_t ori_start, size_t ori_size, int priority);

@@ -198,6 +198,8 @@ main(int argc, char **argv)
 
 #else
 
+	cpu->prot = 1;
+
 	if (!LIBCPU_CHECK_SUCCESS(memory_init_region_ram(cpu, 0, ramsize, 1))) {
 		printf("Failed to initialize ram memory!\n");
 		return 1;

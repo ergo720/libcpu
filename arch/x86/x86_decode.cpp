@@ -510,7 +510,7 @@ static const uint64_t decode_table_two[256] = {
 	/*[0xC4]*/	X86_OPC_UNDEFINED, // sse
 	/*[0xC5]*/	X86_OPC_UNDEFINED, // sse
 	/*[0xC6]*/	X86_OPC_UNDEFINED, // sse
-	/*[0xC7]*/	X86_OPC_GROUP(9) | ADDRMOD_RM | WIDTH_QWORD,
+	/*[0xC7]*/	X86_OPC_GROUP(9) | ADDRMOD_RM,
 	/*[0xC8]*/	X86_OPC_BSWAP | ADDRMOD_REG | WIDTH_DWORD,
 	/*[0xC9]*/	X86_OPC_BSWAP | ADDRMOD_REG | WIDTH_DWORD,
 	/*[0xCA]*/	X86_OPC_BSWAP | ADDRMOD_REG | WIDTH_DWORD,
@@ -791,7 +791,6 @@ decode_dst_operand(struct x86_instr *instr)
 	case DST_MEM:
 		if (instr->flags & SIB) {
 			operand->type = OPTYPE_SIB_MEM;
-			// Incorrect? operand->disp = instr->disp;
 		}
 		else {
 			operand->type = OPTYPE_MEM;
@@ -895,7 +894,6 @@ decode_src_operand(struct x86_instr *instr)
 	case SRC_MEM:
 		if (instr->flags & SIB) {
 			operand->type = OPTYPE_SIB_MEM;
-			// Incorrect? operand->disp = instr->disp;
 		}
 		else {
 			operand->type = OPTYPE_MEM;
@@ -993,7 +991,7 @@ decode_rel(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 static void
 decode_moffset(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 {
-	if (instr->addr_size_override == 0) {
+	if (instr->addr_size_override ^ cpu->prot) {
 		instr->disp = arch_x86_mem_read32(cpu, pc);
 	}
 	else {
@@ -1082,42 +1080,42 @@ decode_modrm_fields(struct x86_instr *instr, uint8_t modrm)
 #define RM_MOD_2 (2 << RM_MOD_SHIFT) // TODO : Rename
 
 static void
-decode_modrm_addr_modes(struct x86_instr *instr)
+decode_modrm_addr_modes(struct x86_instr *instr, uint8_t prot)
 {
 	if (instr->flags & DIR_REVERSED) {
 		instr->flags |= mod_dst_decode[instr->mod];
-		switch ((instr->addr_size_override << RM_SIZE_SHIFT) | (instr->mod << RM_MOD_SHIFT) | instr->rm) {
-		case 0 | RM_MOD_2: // fallthrough
-		case 1 | RM_MOD_2: // fallthrough
-		case 2 | RM_MOD_2: // fallthrough
-		case 3 | RM_MOD_2: // fallthrough
-		case 5 | RM_MOD_2: // fallthrough
-		case 6 | RM_MOD_2: // fallthrough
-		case 7 | RM_MOD_2:
-			instr->flags |= DST_MEM_DISP_DWORD;
-			break;
+		switch (((instr->addr_size_override ^ prot) << RM_SIZE_SHIFT) | (instr->mod << RM_MOD_SHIFT) | instr->rm) {
 		case 0 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 1 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 2 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 3 | RM_MOD_2 | RM_SIZE: // fallthrough
-		case 4 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 5 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 6 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 7 | RM_MOD_2 | RM_SIZE:
+			instr->flags |= DST_MEM_DISP_DWORD;
+			break;
+		case 0 | RM_MOD_2: // fallthrough
+		case 1 | RM_MOD_2: // fallthrough
+		case 2 | RM_MOD_2: // fallthrough
+		case 3 | RM_MOD_2: // fallthrough
+		case 4 | RM_MOD_2: // fallthrough
+		case 5 | RM_MOD_2: // fallthrough
+		case 6 | RM_MOD_2: // fallthrough
+		case 7 | RM_MOD_2:
 			instr->flags |= DST_MEM_DISP_WORD;
 			break;
-		case 4 | RM_MOD_0: // fallthrough
-		case 4 | RM_MOD_1:
+		case 4 | RM_MOD_0 | RM_SIZE: // fallthrough
+		case 4 | RM_MOD_1 | RM_SIZE:
 			instr->flags |= SIB;
 			break;
-		case 4 | RM_MOD_2:
+		case 4 | RM_MOD_2 | RM_SIZE:
 			instr->flags |= (DST_MEM_DISP_DWORD | SIB);
 			break;
-		case 5 | RM_MOD_0:
+		case 5 | RM_MOD_0 | RM_SIZE:
 			instr->flags &= ~DST_MEM;
 			instr->flags |= DST_MEM_DISP_DWORD;
 			break;
-		case 6 | RM_MOD_0 | RM_SIZE:
+		case 6 | RM_MOD_0:
 			instr->flags &= ~DST_MEM;
 			instr->flags |= DST_MEM_DISP_WORD;
 			break;
@@ -1127,38 +1125,38 @@ decode_modrm_addr_modes(struct x86_instr *instr)
 	}
 	else {
 		instr->flags |= mod_src_decode[instr->mod];
-		switch ((instr->addr_size_override << RM_SIZE_SHIFT) | (instr->mod << RM_MOD_SHIFT) | instr->rm) {
-		case 0 | RM_MOD_2: // fallthrough
-		case 1 | RM_MOD_2: // fallthrough
-		case 2 | RM_MOD_2: // fallthrough
-		case 3 | RM_MOD_2: // fallthrough
-		case 5 | RM_MOD_2: // fallthrough
-		case 6 | RM_MOD_2: // fallthrough
-		case 7 | RM_MOD_2:
-			instr->flags |= SRC_MEM_DISP_DWORD;
-			break;
+		switch (((instr->addr_size_override ^ prot) << RM_SIZE_SHIFT) | (instr->mod << RM_MOD_SHIFT) | instr->rm) {
 		case 0 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 1 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 2 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 3 | RM_MOD_2 | RM_SIZE: // fallthrough
-		case 4 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 5 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 6 | RM_MOD_2 | RM_SIZE: // fallthrough
 		case 7 | RM_MOD_2 | RM_SIZE:
+			instr->flags |= SRC_MEM_DISP_DWORD;
+			break;
+		case 0 | RM_MOD_2: // fallthrough
+		case 1 | RM_MOD_2: // fallthrough
+		case 2 | RM_MOD_2: // fallthrough
+		case 3 | RM_MOD_2: // fallthrough
+		case 4 | RM_MOD_2: // fallthrough
+		case 5 | RM_MOD_2: // fallthrough
+		case 6 | RM_MOD_2: // fallthrough
+		case 7 | RM_MOD_2:
 			instr->flags |= SRC_MEM_DISP_WORD;
 			break;
-		case 4 | RM_MOD_0: // fallthrough
-		case 4 | RM_MOD_1:
+		case 4 | RM_MOD_0 | RM_SIZE: // fallthrough
+		case 4 | RM_MOD_1 | RM_SIZE:
 			instr->flags |= SIB;
 			break;
-		case 4 | RM_MOD_2:
+		case 4 | RM_MOD_2 | RM_SIZE:
 			instr->flags |= (SRC_MEM_DISP_DWORD | SIB);
 			break;
-		case 5 | RM_MOD_0:
+		case 5 | RM_MOD_0 | RM_SIZE:
 			instr->flags &= ~SRC_MEM;
 			instr->flags |= SRC_MEM_DISP_DWORD;
 			break;
-		case 6 | RM_MOD_0 | RM_SIZE:
+		case 6 | RM_MOD_0:
 			instr->flags &= ~SRC_MEM;
 			instr->flags |= SRC_MEM_DISP_WORD;
 			break;
@@ -1214,7 +1212,7 @@ arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 				continue; // repeat loop
 			case X86_DECODE_CLASS_DIFF_SYNTAX:
 				// Calculate diff_syntax_* last dimension index : 0 = standard, 1 = size_override, 2 = Intel syntax, 3 = Intel syntax AND size override 
-				bits = instr->op_size_override | (use_intel << 1);
+				bits = ((instr->op_size_override ^ cpu->prot) ^ 1) | (use_intel << 1);
 				opcode = diff_syntax_opcodes[GET_FIELD(decode, X86_DIFF_SYNTAX)][bits];
 				if (instr_byte == 0x62)
 					instr->flags |= diff_syntax_flags_0x62[bits];
@@ -1231,7 +1229,7 @@ arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 		instr->flags |= decode & ~GET_MASK(X86_OPCODE);
 		if (instr->flags & MOD_RM) {
 			decode_modrm_fields(instr, arch_x86_mem_read8(cpu, &pc));
-			decode_modrm_addr_modes(instr);
+			decode_modrm_addr_modes(instr, cpu->prot);
 		}
 	} else { // Read from grp*_decode_table
 		// Mask away (initially set) width flags, if the group entry also has a width flag :
@@ -1240,11 +1238,11 @@ arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 		// Mask away (initially set) addressing mode flags, if the group entry also has address mode flags :
 		if (decode & ADDRMOD_MASK)
 			instr->flags &= ~ADDRMOD_MASK;
-		instr->flags |= decode; // & ~GET_MASK(X86_OPCODE); // Doesn't seem necessary (opcode bits aren't checked)
-		decode_modrm_addr_modes(instr);
+		instr->flags |= decode & ~GET_MASK(X86_OPCODE);
+		decode_modrm_addr_modes(instr, cpu->prot);
 	}
 
-	if (instr->op_size_override) {
+	if ((instr->op_size_override ^ cpu->prot) ^ 1) {
 		if (instr->flags & WIDTH_DWORD) {
 			instr->flags &= ~WIDTH_DWORD;
 			instr->flags |= WIDTH_WORD;
