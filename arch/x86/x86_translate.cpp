@@ -396,7 +396,31 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 		return CONSTs(*opsize, operand->imm);
 	case OPTYPE_MEM:
 		*opsize = 0;
-		if (instr->addr_size_override == 1) {
+		if (instr->addr_size_override ^ cpu->prot) {
+			Value *reg;
+			switch (operand->reg) {
+			case EAX: // fallthrough
+			case ECX: // fallthrough
+			case EDX: // fallthrough
+			case EBX: // fallthrough
+			case ESI: // fallthrough
+			case EDI:
+				reg = GPR(operand->reg);
+				break;
+			case ESP:
+				assert(0 && "operand->reg specifies SIB with OPTYPE_MEM!\n");
+				return nullptr;
+			case EBP:
+				assert(0 && "operand->reg specifies OPTYPE_MEM_DISP with OPTYPE_MEM!\n");
+				return nullptr;
+			default:
+				assert(0 && "Unknown reg index in OPTYPE_MEM\n");
+				return nullptr;
+			}
+			*opsize = 32;
+			return reg;
+		}
+		else {
 			Value *reg;
 			switch (operand->reg) {
 			case EAX:
@@ -430,30 +454,6 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 			*opsize = 16;
 			return reg;
 		}
-		else {
-			Value *reg;
-			switch (operand->reg) {
-			case EAX: // fallthrough
-			case ECX: // fallthrough
-			case EDX: // fallthrough
-			case EBX: // fallthrough
-			case ESI: // fallthrough
-			case EDI:
-				reg = GPR(operand->reg);
-				break;
-			case ESP:
-				assert(0 && "operand->reg specifies SIB with OPTYPE_MEM!\n");
-				return nullptr;
-			case EBP:
-				assert(0 && "operand->reg specifies OPTYPE_MEM_DISP with OPTYPE_MEM!\n");
-				return nullptr;
-			default:
-				assert(0 && "Unknown reg index in OPTYPE_MEM\n");
-				return nullptr;
-			}
-			*opsize = 32;
-			return reg;
-		}
 	case OPTYPE_MOFFSET:
 		switch (instr->flags & WIDTH_MASK) {
 		case WIDTH_BYTE:
@@ -473,7 +473,67 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 		return CONSTs(*opsize, operand->disp);
 	case OPTYPE_MEM_DISP:
 		*opsize = 0;
-		if (instr->addr_size_override == 1) {
+		if (instr->addr_size_override ^ cpu->prot) {
+			Value *reg;
+			switch (instr->mod) {
+			case 0:
+				if (instr->rm == 5) {
+					reg = CONSTs(32, operand->disp);
+				}
+				else {
+					assert(0 && "instr->mod == 0 but instr->rm != 5 in OPTYPE_MEM_DISP!\n");
+					return nullptr;
+				}
+				break;
+			case 1:
+				switch (instr->rm) {
+				case EAX: // fallthrough
+				case ECX: // fallthrough
+				case EDX: // fallthrough
+				case EBX: // fallthrough
+				case EBP: // fallthrough
+				case ESI: // fallthrough
+				case EDI:
+					reg = ADD(GPR(instr->rm), SEXT(32, CONSTs(8, operand->disp)));
+					break;
+				case ESP:
+					assert(0 && "instr->rm specifies OPTYPE_SIB_DISP with OPTYPE_MEM_DISP!\n");
+					return nullptr;
+				default:
+					assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
+					return nullptr;
+				}
+				break;
+			case 2:
+				switch (instr->rm) {
+				case EAX: // fallthrough
+				case ECX: // fallthrough
+				case EDX: // fallthrough
+				case EBX: // fallthrough
+				case EBP: // fallthrough
+				case ESI: // fallthrough
+				case EDI:
+					reg = ADD(GPR(instr->rm), CONSTs(32, operand->disp));
+					break;
+				case ESP:
+					assert(0 && "instr->rm specifies OPTYPE_SIB_DISP with OPTYPE_MEM_DISP!\n");
+					return nullptr;
+				default:
+					assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
+					return nullptr;
+				}
+				break;
+			case 3:
+				assert(0 && "instr->rm specifies OPTYPE_REG with OPTYPE_MEM_DISP!\n");
+				return nullptr;
+			default:
+				assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
+				return nullptr;
+			}
+			*opsize = 32;
+			return reg;
+		}
+		else {
 			Value *reg;
 			switch (instr->mod) {
 			case 0:
@@ -555,66 +615,6 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 				return nullptr;
 			}
 			*opsize = 16;
-			return reg;
-		}
-		else {
-			Value *reg;
-			switch (instr->mod) {
-			case 0:
-				if (instr->rm == 5) {
-					reg = CONSTs(32, operand->disp);
-				}
-				else {
-					assert(0 && "instr->mod == 0 but instr->rm != 5 in OPTYPE_MEM_DISP!\n");
-					return nullptr;
-				}
-				break;
-			case 1:
-				switch (instr->rm) {
-				case EAX: // fallthrough
-				case ECX: // fallthrough
-				case EDX: // fallthrough
-				case EBX: // fallthrough
-				case EBP: // fallthrough
-				case ESI: // fallthrough
-				case EDI:
-					reg = ADD(GPR(instr->rm), SEXT(32, CONSTs(8, operand->disp)));
-					break;
-				case ESP:
-					assert(0 && "instr->rm specifies OPTYPE_SIB_DISP with OPTYPE_MEM_DISP!\n");
-					return nullptr;
-				default:
-					assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
-					return nullptr;
-				}
-				break;
-			case 2:
-				switch (instr->rm) {
-				case EAX: // fallthrough
-				case ECX: // fallthrough
-				case EDX: // fallthrough
-				case EBX: // fallthrough
-				case EBP: // fallthrough
-				case ESI: // fallthrough
-				case EDI:
-					reg = ADD(GPR(instr->rm), CONSTs(32, operand->disp));
-					break;
-				case ESP:
-					assert(0 && "instr->rm specifies OPTYPE_SIB_DISP with OPTYPE_MEM_DISP!\n");
-					return nullptr;
-				default:
-					assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
-					return nullptr;
-				}
-				break;
-			case 3:
-				assert(0 && "instr->rm specifies OPTYPE_REG with OPTYPE_MEM_DISP!\n");
-				return nullptr;
-			default:
-				assert(0 && "Unknown rm index in OPTYPE_MEM_DISP\n");
-				return nullptr;
-			}
-			*opsize = 32;
 			return reg;
 		}
 	case OPTYPE_REG:

@@ -174,12 +174,12 @@ static const char *to_reg_name(struct x86_instr *instr, unsigned int reg_num)
 	return full_reg_names[reg_num];
 }
 
-static const char *to_mem_reg_name(struct x86_instr *instr, unsigned int reg_num)
+static const char *to_mem_reg_name(struct x86_instr *instr, unsigned int reg_num, uint8_t prot)
 {
-	if (instr->addr_size_override)
-		return mem_reg_names_16[reg_num];
+	if (instr->addr_size_override ^ prot)
+		return mem_reg_names_32[reg_num];
 
-	return mem_reg_names_32[reg_num];
+	return mem_reg_names_16[reg_num];
 }
 
 static const char *to_sib_base_name(struct x86_instr *instr)
@@ -298,7 +298,7 @@ static const char *add_instr_suffix(struct x86_instr *instr)
 }
 
 static int
-print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand)
+print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, struct x86_operand *operand, uint8_t prot)
 {
 	int ret = 0;
 
@@ -331,7 +331,7 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 		ret = snprintf(operands, size, "%s0x%x", sign_to_str(operand->disp), abs(operand->disp));
 		break;
 	case OPTYPE_MEM:
-		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], to_mem_reg_name(instr, operand->reg));
+		ret = snprintf(operands, size, "%s(%s)", seg_override_names[instr->seg_override], to_mem_reg_name(instr, operand->reg, prot));
 		break;
 	case OPTYPE_MEM_DISP:
 		ret = snprintf(operands, size, "%s%s0x%x", seg_override_names[instr->seg_override], sign_to_str(operand->disp), abs(operand->disp));
@@ -340,7 +340,7 @@ print_operand(addr_t pc, char *operands, size_t size, struct x86_instr *instr, s
 		case 65542: // 1, 0, 6
 			break;
 		default:
-			ret += snprintf(operands+ret, size-ret, "(%s)", to_mem_reg_name(instr, operand->reg));
+			ret += snprintf(operands+ret, size-ret, "(%s)", to_mem_reg_name(instr, operand->reg, prot));
 		}
 		break;
 	case OPTYPE_SIB_MEM:
@@ -372,19 +372,19 @@ arch_x86_disasm_instr_att(cpu_t *cpu, addr_t pc, char *line, unsigned int max_li
 
 	/* AT&T syntax operands */
 	if (!(instr.flags & OP3_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_THIRD]);
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_THIRD], cpu->prot);
 
 	if (!(instr.flags & SRC_NONE) && !(instr.flags & OP3_NONE))
 		len += snprintf(operands+len, sizeof(operands)-len, ",");
 
 	if (!(instr.flags & SRC_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_SRC]);
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_SRC], cpu->prot);
 
 	if (!(instr.flags & SRC_NONE) && !(instr.flags & DST_NONE))
 		len += snprintf(operands+len, sizeof(operands)-len, ",");
 
 	if (!(instr.flags & DST_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_DST]);
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_DST], cpu->prot);
 
     snprintf(line, max_line, "%s%s%-*s%s %s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], (int)strlen(to_mnemonic(&instr)), to_mnemonic(&instr), add_instr_suffix(&instr), operands);
 
