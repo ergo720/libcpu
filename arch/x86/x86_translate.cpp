@@ -15,6 +15,7 @@
 #include "x86_cc.h"
 #include "frontend.h"
 #include "x86_decode.h"
+#include "x86_internal.h"
 
 #define BAD fprintf(stderr, "%s: unimplemented instruction encountered at line %d\n", __func__, __LINE__); exit(1)
 
@@ -396,7 +397,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 		return CONSTs(*opsize, operand->imm);
 	case OPTYPE_MEM:
 		*opsize = 0;
-		if (instr->addr_size_override ^ cpu->prot) {
+		if (instr->addr_size_override ^ (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK)) {
 			Value *reg;
 			switch (operand->reg) {
 			case EAX: // fallthrough
@@ -473,7 +474,7 @@ arch_x86_get_operand(cpu_t *cpu, struct x86_instr *instr, BasicBlock *bb, unsign
 		return CONSTs(*opsize, operand->disp);
 	case OPTYPE_MEM_DISP:
 		*opsize = 0;
-		if (instr->addr_size_override ^ cpu->prot) {
+		if (instr->addr_size_override ^ (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK)) {
 			Value *reg;
 			switch (instr->mod) {
 			case 0:
