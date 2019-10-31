@@ -686,8 +686,8 @@ static const uint64_t *decode_tables[11] = {
 	grp9_decode_table,
 };
 
-// offset 0 = standard, 1 = size_override, 2 = Intel syntax (instead of AT&T), 3 = Intel syntax AND size override 
-static const uint64_t diff_syntax_flags_0x62[4] = { WIDTH_DWORD, WIDTH_WORD, WIDTH_QWORD, WIDTH_DWORD };
+// offset 0 = AT&T AND size_override, 1 = AT&T sintax, 2 = Intel syntax AND size override , 3 = Intel syntax
+static const uint64_t diff_syntax_flags_0x62[4] = { WIDTH_WORD, WIDTH_DWORD, WIDTH_DWORD, WIDTH_QWORD };
 
 static const arch_x86_opcode diff_syntax_opcodes[17][4] = { // Opcodes for all elements marked with X86_OPC_DIFF_SYNTAX
 	// decode_table_one :
@@ -1231,7 +1231,7 @@ arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 				instr_byte = instr->reg_opc;
 				continue; // repeat loop
 			case X86_DECODE_CLASS_DIFF_SYNTAX:
-				// Calculate diff_syntax_* last dimension index : 0 = AT&T AND size_override, 1 =AT&T sintax, 2 = Intel syntax AND size override , 3 = Intel syntax
+				// Calculate diff_syntax_* last dimension index : 0 = AT&T AND size_override, 1 = AT&T sintax, 2 = Intel syntax AND size override , 3 = Intel syntax
 				bits = (instr->op_size_override ^ (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK)) | (use_intel << 1);
 				opcode = diff_syntax_opcodes[GET_FIELD(decode, X86_DIFF_SYNTAX)][bits];
 				if (instr_byte == 0x62)
