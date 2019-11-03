@@ -11,3 +11,7 @@ int				arch_x86_translate_instr(cpu_t *cpu, addr_t pc, BasicBlock *bb);
 
 #define CRO_PE_SHIFT 0
 #define CR0_PE_MASK (1 << CRO_PE_SHIFT)
+
+#define R_CR0 ((reg_x86_t *)(cpu->rf.grf))->cr0
+
+#define CPU_PE_MODE (R_CR0 & CR0_PE_MASK)

@@ -373,19 +373,19 @@ arch_x86_disasm_instr_att(cpu_t *cpu, addr_t pc, char *line, unsigned int max_li
 
 	/* AT&T syntax operands */
 	if (!(instr.flags & OP3_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_THIRD], (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK));
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_THIRD], CPU_PE_MODE);
 
 	if (!(instr.flags & SRC_NONE) && !(instr.flags & OP3_NONE))
 		len += snprintf(operands+len, sizeof(operands)-len, ",");
 
 	if (!(instr.flags & SRC_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_SRC], (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK));
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_SRC], CPU_PE_MODE);
 
 	if (!(instr.flags & SRC_NONE) && !(instr.flags & DST_NONE))
 		len += snprintf(operands+len, sizeof(operands)-len, ",");
 
 	if (!(instr.flags & DST_NONE))
-		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_DST], (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK));
+		len += print_operand(pc, operands+len, sizeof(operands)-len, &instr, &instr.operand[OPNUM_DST], CPU_PE_MODE);
 
     snprintf(line, max_line, "%s%s%-*s%s %s", lock_names[instr.lock_prefix], prefix_names[instr.rep_prefix], (int)strlen(to_mnemonic(&instr)), to_mnemonic(&instr), add_instr_suffix(&instr), operands);
 

@@ -1011,7 +1011,7 @@ decode_rel(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 static void
 decode_moffset(cpu_t *cpu, struct x86_instr *instr, addr_t *pc)
 {
-	if (instr->addr_size_override ^ (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK)) {
+	if (instr->addr_size_override ^ CPU_PE_MODE) {
 		instr->disp = arch_x86_ram_read<uint32_t>(cpu, pc);
 	}
 	else {
@@ -1233,7 +1233,7 @@ arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 				continue; // repeat loop
 			case X86_DECODE_CLASS_DIFF_SYNTAX:
 				// Calculate diff_syntax_* last dimension index : 0 = AT&T 16 bit, 1 = AT&T sintax 32 bit, 2 = Intel syntax 16 bit , 3 = Intel syntax 32 bit
-				bits = (instr->op_size_override ^ (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK)) | (use_intel << 1);
+				bits = (instr->op_size_override ^ CPU_PE_MODE) | (use_intel << 1);
 				opcode = diff_syntax_opcodes[GET_FIELD(decode, X86_DIFF_SYNTAX)][bits];
 				if (instr_byte == 0x62)
 					instr->flags |= diff_syntax_flags_0x62[bits];
@@ -1256,7 +1256,7 @@ arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 		instr->flags |= decode & ~GET_MASK(X86_OPCODE);
 		if (instr->flags & MOD_RM) {
 			decode_modrm_fields(instr, arch_x86_ram_read<uint8_t>(cpu, &pc));
-			decode_modrm_addr_modes(instr, (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK));
+			decode_modrm_addr_modes(instr, CPU_PE_MODE);
 		}
 	} else { // Read from grp*_decode_table
 		// Mask away (initially set) width flags, if the group entry also has a width flag :
@@ -1266,10 +1266,10 @@ arch_x86_decode_instr(cpu_t *cpu, struct x86_instr *instr, addr_t pc)
 		if (decode & ADDRMOD_MASK)
 			instr->flags &= ~ADDRMOD_MASK;
 		instr->flags |= decode & ~GET_MASK(X86_OPCODE);
-		decode_modrm_addr_modes(instr, (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK));
+		decode_modrm_addr_modes(instr, CPU_PE_MODE);
 	}
 
-	if (no_fixed_size && (instr->op_size_override ^ (((reg_x86_t *)(cpu->rf.grf))->cr0 & CR0_PE_MASK))) {
+	if (no_fixed_size && (instr->op_size_override ^ CPU_PE_MODE)) {
 		if (instr->flags & WIDTH_WORD) {
 			instr->flags &= ~WIDTH_WORD;
 			instr->flags |= WIDTH_DWORD;
